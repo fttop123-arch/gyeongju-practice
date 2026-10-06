@@ -10,7 +10,7 @@
 <div class="practice">실습용 시안 — 경주시 공식 홈페이지가 아닙니다</div>
 <header class="wrap header">
   <a class="logo" href="#home" aria-label="경주시 실습용 홈">경주시<span>GYEONGJU</span></a>
-  <nav aria-label="주요 메뉴"><a href="#services">종합민원</a><a href="#services">시민참여</a><a href="#news">경주소식</a><a href="#home">경주소개</a><a href="#services">분야별정보</a></nav>
+  <nav aria-label="주요 메뉴"><a href="#services">종합민원</a><a href="#services">시민참여</a><a href="#news">경주소식</a><a href="#home">경주소개</a><a href="#services">분야별정보</a><button type="button" id="mayor-open" aria-haspopup="dialog">열린시장실</button></nav>
 </header>
 <main id="home">
   <section class="hero wrap" aria-labelledby="hero-title">
@@ -49,4 +49,16 @@
 </main>
 <footer><div class="wrap footer-inner"><div class="footer-logo">경주시 <span>실습용 시안</span></div><p>교육용으로 제작한 홈페이지입니다. 민원 접수·예약 등 실제 서비스는 제공하지 않습니다.<br>게시물과 일정은 모두 가상 예시입니다.</p></div></footer>
 <div class="wrap photo-credit">사진: <a href="https://commons.wikimedia.org/wiki/File:Cheomseongdae-1.jpg" target="_blank" rel="noopener noreferrer">Zsinj / Wikimedia Commons</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a> · 배경 표시를 위한 크기·화면 영역 조정 및 음영 적용</div>
+<dialog id="mayor-dialog" aria-labelledby="mayor-title">
+  <form method="dialog"><button class="dialog-close" aria-label="열린시장실 닫기">닫기</button></form>
+  <span class="mayor-label">실습용 열린시장실</span>
+  <h2 id="mayor-title">경주시장 주낙영</h2>
+  <img class="mayor-photo" src="mayor.png" alt="경주시장 주낙영 사진" width="727" height="629">
+  <p class="mayor-source">사진 출처: <a href="https://www.gyeongju.go.kr/mayor/index.do" target="_blank" rel="noopener noreferrer">경주시 공식 열린시장실</a></p>
+  <p class="mayor-note">이 창은 교육용 시안이며 공식 시장실이 아닙니다.</p>
+</dialog>
+<script>
+  const mayorDialog = document.getElementById('mayor-dialog');
+  document.getElementById('mayor-open').addEventListener('click', () => mayorDialog.showModal());
+</script>
 </body></html>
