@@ -2,11 +2,11 @@
 export const llmProviders = {
   hasa: {
     keyName: 'HASA_API_KEY', defaultModel: '',
-    async generate({ question, instructions, model, apiKey, fetchApi, baseUrl = 'https://open.hasa.re.kr/v1' }) {
+    async generate({ question, instructions, model, apiKey, fetchApi, baseUrl = 'https://open.hasa.re.kr/v1', maxTokens = 700 }) {
       if (!model || baseUrl.replace(/\/$/, '') !== 'https://open.hasa.re.kr/v1') throw new Error('MODEL_CONFIG');
       const response = await fetchApi(baseUrl.replace(/\/$/, '') + '/chat/completions', {
         method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: instructions }, { role: 'user', content: question }], max_tokens: 700, stream: false }),
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: instructions }, { role: 'user', content: question }], max_tokens: maxTokens, stream: false }),
         signal: AbortSignal.timeout(45000),
       });
       if (!response.ok) {

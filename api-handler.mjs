@@ -1,6 +1,7 @@
 // 이 파일은 서버에서만 실행됩니다. API 키를 HTML에 넣지 않습니다.
 import { getLlmConfiguration } from './llm-providers.mjs';
 import { answerWithRag } from './rag.mjs';
+import { analyzePublicDataApplication } from './public-data-helper.mjs';
 export function apiStatus(env) {
   const config = getLlmConfiguration(env);
   return Response.json({ ready: Boolean(config?.apiKey && config?.model && env.PRACTICE_ACCESS_CODE && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
@@ -40,6 +41,10 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null) {
     if (count.count >= 5) return json({ error: '질문이 많습니다. 1분 뒤 다시 시도해 주세요.' }, 429);
     count.count++; usage.set(client, count);
     try {
+      if (data.mode === 'public-data') {
+        const analysis = await analyzePublicDataApplication({ question, config, fetchApi });
+        return json({ analysis });
+      }
       if (data.mode === 'rag') {
         if (!ragIndex) return json({ error: 'PDF 검색 준비가 아직 완료되지 않았습니다.' }, 503);
         return json(await answerWithRag({ question, env, config, index: ragIndex, fetchApi }));

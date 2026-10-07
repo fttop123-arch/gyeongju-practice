@@ -7,6 +7,7 @@ try { ragIndex = JSON.parse(await readFile(new URL('./data/rag-index.json', impo
 catch (error) { if (error.code !== 'ENOENT') throw error; }
 const ask = createApiHandler(fetch, ragIndex);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
+assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1:8000');
