@@ -24,5 +24,22 @@ window.renderPublicDataAnalysis = function (analysis, target) {
   bullets('추가 확인사항', analysis.checks);
   bullets('제공 시 주의사항', analysis.cautions);
   paragraph('담당부서 전달용 요청문 초안', analysis.departmentDraft);
+  const actions = document.createElement('div'); actions.className = 'public-data-export';
+  const download = document.createElement('button'); download.type = 'button'; download.textContent = '샘플 Excel 생성';
+  const status = document.createElement('p'); status.setAttribute('role','status');
+  status.textContent = '현재 권장 컬럼으로 가상자료 3행과 안내 시트를 만듭니다.';
+  actions.append(download, status); target.append(actions);
+  download.addEventListener('click', async () => {
+    download.disabled = true; status.textContent = 'Excel 파일을 생성하고 있습니다.';
+    try {
+      const response = await fetch('/api/sample-excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({columns:analysis.columns.map(column => column.name), accessCode:document.getElementById('ai-access-code').value.trim()}), signal:AbortSignal.timeout(15000)});
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Excel 생성에 실패했습니다.'); }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a'); link.href = url; link.download = '공공데이터_제공신청_샘플.xlsx'; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      status.textContent = '다운로드했습니다. 실제 행정자료가 아닌 가상 샘플입니다.';
+    } catch (error) { status.textContent = error.name === 'TimeoutError' ? '생성 시간이 초과되었습니다. 다시 시도해 주세요.' : error.message; }
+    finally { download.disabled = false; }
+  });
   target.hidden = false;
 };

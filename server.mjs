@@ -2,6 +2,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createApiHandler, apiStatus } from './api-handler.mjs';
+import { sampleExcelResponse } from './sample-excel.mjs';
 let ragIndex = null;
 try { ragIndex = JSON.parse(await readFile(new URL('./data/rag-index.json', import.meta.url), 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -11,6 +12,11 @@ assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=u
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1:8000');
+    if (url.pathname === '/api/sample-excel') {
+      const request = new Request(url, { method: req.method, headers: req.headers, ...(req.method === 'POST' ? { body: req, duplex: 'half' } : {}) });
+      const result = await sampleExcelResponse(request, process.env);
+      res.writeHead(result.status, Object.fromEntries(result.headers)); res.end(Buffer.from(await result.arrayBuffer())); return;
+    }
     if (url.pathname === '/api/status' && req.method === 'GET') {
       const result = apiStatus(process.env);
       res.writeHead(result.status, Object.fromEntries(result.headers)); res.end(await result.text()); return;
