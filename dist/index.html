@@ -127,12 +127,12 @@
       const response = await fetch('/api/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, accessCode: codeInput.value.trim(), mode: document.getElementById('ai-mode').value }),
-        signal: AbortSignal.timeout(55000),
+        signal: AbortSignal.timeout(document.getElementById('ai-mode').value === 'public-data' ? 150000 : 55000),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'AI 연결에 실패했습니다.');
       if (data.analysis) {
-        window.renderPublicDataAnalysis(data.analysis, publicDataResult);
+        window.renderPublicDataAnalysis(data.analysis, publicDataResult, data);
         answer.textContent = '공공데이터 제공신청 분석이 완료됐습니다. 아래 업무 카드를 확인하세요.';
         return;
       }

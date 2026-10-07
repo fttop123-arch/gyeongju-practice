@@ -4,3 +4,5 @@
 .dev.vars
 dist/server/
 rag-test-results*.json
+data/public-data-law-index.pending.json
+data/public-data-law-index.json.tmp

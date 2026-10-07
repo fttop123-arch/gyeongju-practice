@@ -10,9 +10,11 @@ const embedding = await readFile(new URL('./embedding-provider.mjs', import.meta
 const rag = (await readFile(new URL('./rag.mjs', import.meta.url), 'utf8')).replace("import { embedTexts } from './embedding-provider.mjs';", '');
 const index = await readFile(new URL('./data/rag-index.json', import.meta.url), 'utf8');
 const publicData = await readFile(new URL('./public-data-helper.mjs', import.meta.url), 'utf8');
+const lawRag = (await readFile(new URL('./public-data-law-rag.mjs',import.meta.url),'utf8')).replace("import { embedTexts } from './embedding-provider.mjs';",'').replace("import { cosine } from './rag.mjs';",'').replace("import { analyzePublicDataApplication } from './public-data-helper.mjs';",'');
+const lawIndex = await readFile(new URL('./data/public-data-law-index.json',import.meta.url),'utf8');
 const sampleExcel = await readFile(new URL('./sample-excel.mjs', import.meta.url), 'utf8');
-const handler = (await readFile(new URL('./api-handler.mjs', import.meta.url), 'utf8')).replace("import { getLlmConfiguration } from './llm-providers.mjs';", '').replace("import { answerWithRag } from './rag.mjs';", '').replace("import { analyzePublicDataApplication } from './public-data-helper.mjs';", '');
-const code = providers + '\n' + embedding + '\n' + rag + '\n' + publicData + '\n' + sampleExcel + '\n' + handler + '\nconst ragIndex = ' + index + ';\nconst ask = createApiHandler(fetch, ragIndex);\nconst assets = ' + JSON.stringify(assets) + `;
+const handler = (await readFile(new URL('./api-handler.mjs', import.meta.url), 'utf8')).replace("import { getLlmConfiguration } from './llm-providers.mjs';", '').replace("import { answerWithRag } from './rag.mjs';", '').replace("import { analyzePublicDataApplication } from './public-data-helper.mjs';", '').replace("import { analyzeWithPublicDataLaws } from './public-data-law-rag.mjs';",'');
+const code = providers + '\n' + embedding + '\n' + rag + '\n' + publicData + '\n' + lawRag + '\n' + sampleExcel + '\n' + handler + '\nconst ragIndex = ' + index + ';\nconst lawIndex = ' + lawIndex + ';\nconst ask = createApiHandler(fetch, ragIndex, lawIndex);\nconst assets = ' + JSON.stringify(assets) + `;
 export default { async fetch(request, env) {
   const url = new URL(request.url);
   if (url.pathname === '/api/status' && request.method === 'GET') return apiStatus(env);

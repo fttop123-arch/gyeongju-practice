@@ -15,3 +15,6 @@ nav{gap:24px}nav button{border:0;background:none;color:var(--blue);font-size:18p
 .public-data-export button { background: #117b60; color: white; border: 0; border-radius: 8px; padding: 14px 22px; font: inherit; font-weight: 700; cursor: pointer; }
 .public-data-export button:disabled { opacity: .6; cursor: wait; }
 .public-data-export p { margin-top: 12px; }
+.public-data-law-evidence { grid-column: 1 / -1; padding: 22px; background: white; border: 1px solid #cbdedb; border-radius: 12px; overflow-wrap: anywhere; }
+.public-data-law-evidence details { margin-top: 14px; padding: 12px; background: #f2f8f6; }
+.public-data-law-evidence summary { cursor: pointer; font-weight: 700; }
