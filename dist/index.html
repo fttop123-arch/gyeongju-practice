@@ -34,7 +34,7 @@
       <textarea id="ai-question" rows="4" maxlength="2000" placeholder="예: 시민 교육 안내문은 어떻게 작성하면 좋을까요?" aria-describedby="ai-help" required></textarea>
       <label class="access-label" for="ai-access-code">실습 접속코드</label>
       <input id="ai-access-code" type="password" autocomplete="off" placeholder="관리자에게 받은 접속코드" required>
-      <div class="ai-actions"><p id="ai-help">공개자료·가상자료만 입력하세요. 질문은 Google Gemini로 전송되며 무료 티어에서는 제품 개선에 사용될 수 있습니다.</p><button type="submit">질문하기</button></div>
+      <div class="ai-actions"><p id="ai-help">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p><button type="submit">질문하기</button></div>
     </form>
     <div id="ai-answer" class="ai-answer" role="status" aria-live="polite" aria-atomic="true" hidden></div>
   </section>
@@ -82,7 +82,7 @@
       if (!response.ok) throw new Error();
       const status = await response.json();
       askButton.disabled = !status.ready;
-      connection.textContent = status.ready ? 'Gemini 연결 설정이 등록되어 있습니다. 공개자료·가상자료로 질문해 보세요.' : 'Gemini 연결 준비 중입니다. 관리자가 무료 API 키를 등록하면 질문할 수 있습니다.';
+      connection.textContent = status.ready ? 'AI 연결 설정이 등록되어 있습니다. 공개자료·가상자료로 질문해 보세요.' : 'AI 연결 준비 중입니다. 서버 설정과 연결 테스트가 완료되면 질문할 수 있습니다.';
     }).catch(() => { connection.textContent = 'AI 서버 연결을 확인할 수 없습니다. 잠시 후 새로고침해 주세요.'; });
   }
   // API 키 없이 우리 서버에 질문을 보내고, 서버가 AI를 호출합니다.

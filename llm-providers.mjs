@@ -1,5 +1,26 @@
 // 공급자별 통신만 이 파일에 둡니다. 화면은 항상 /api/ask를 사용합니다.
 export const llmProviders = {
+  hasa: {
+    keyName: 'HASA_API_KEY', defaultModel: '',
+    async generate({ question, instructions, model, apiKey, fetchApi, baseUrl = 'https://open.hasa.re.kr/v1' }) {
+      if (!model || baseUrl.replace(/\/$/, '') !== 'https://open.hasa.re.kr/v1') throw new Error('MODEL_CONFIG');
+      const response = await fetchApi(baseUrl.replace(/\/$/, '') + '/chat/completions', {
+        method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: instructions }, { role: 'user', content: question }], max_tokens: 700, stream: false }),
+        signal: AbortSignal.timeout(45000),
+      });
+      if (!response.ok) {
+        const raw = await response.text();
+        const detail = raw.split(apiKey).join('[API 키 숨김]').replace(/sk-[\w-]+/g, '[API 키 숨김]').replace(/Bearer\s+[^\s"<>]+/gi, 'Bearer [숨김]').slice(0, 1500);
+        const error = new Error(`Service Hub HTTP ${response.status}: ${detail || response.statusText}`);
+        error.status = response.status; error.provider = 'hasa'; throw error;
+      }
+      const body = await response.json();
+      const text = body.choices?.[0]?.message?.content;
+      if (typeof text !== 'string' || !text.trim()) throw new Error('Service Hub 응답에 choices[0].message.content가 없습니다. 응답 형식 또는 모델 상태를 확인해야 합니다.');
+      return text.trim();
+    },
+  },
   gemini: {
     keyName: 'GEMINI_API_KEY', defaultModel: 'gemini-2.5-flash',
     async generate({ question, instructions, model, apiKey, fetchApi }) {
@@ -24,5 +45,5 @@ export const llmProviders = {
 export function getLlmConfiguration(env) {
   const name = env.LLM_PROVIDER || 'gemini'; const provider = llmProviders[name];
   if (!provider) return null; // 유료 API로 자동 대체하지 않습니다.
-  return { provider, name, model: env.LLM_MODEL || provider.defaultModel, apiKey: env[provider.keyName] };
+  return { provider, name, model: env.LLM_MODEL || provider.defaultModel, apiKey: env[provider.keyName], baseUrl: env.HASA_BASE_URL || 'https://open.hasa.re.kr/v1' };
 }
