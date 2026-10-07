@@ -39,6 +39,13 @@
       <div class="ai-actions"><p id="ai-help">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p><button type="submit">질문하기</button></div>
     </form>
     <div id="ai-answer" class="ai-answer" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <details id="rag-debug" class="rag-debug" hidden>
+      <summary>RAG 검색 과정 보기 · 학습용</summary>
+      <p>답변 생성 전에 선택한 검색 결과를 답변과 함께 표시합니다. 아래 1위 → 2위 → 3위 순서로 전체 chunk가 EXAONE의 근거 1 → 2 → 3에 전달됩니다. 여기에는 앞부분 200자만 표시합니다.</p>
+      <p><strong>최종 점수 = 코사인 유사도 + 0.6 × 핵심 단어 일치 비율</strong><br>핵심 단어는 질문에서 만든 검색 단위 중 chunk에 포함된 비율입니다. 한국어는 두 글자 단위도 비교합니다. 최종 점수는 확률이 아니며 1을 넘을 수 있습니다.</p>
+      <p>관련 내용이 없어도 점수 순으로 3개를 가져옵니다. 높은 점수가 정답을 보장하지 않으므로 실제 텍스트를 확인하세요.</p>
+      <ol id="rag-debug-chunks"></ol>
+    </details>
   </section>
   <section class="news-area" id="news" aria-labelledby="news-title"><div class="wrap">
     <div class="section-head"><h2 id="news-title">경주의 소식</h2><span>모든 게시물은 가상의 실습 예시입니다</span></div>
@@ -93,6 +100,9 @@
     const input = document.getElementById('ai-question');
     const question = input.value.trim();
     const answer = document.getElementById('ai-answer');
+    const debug = document.getElementById('rag-debug');
+    const debugChunks = document.getElementById('rag-debug-chunks');
+    debug.hidden = true; debug.open = false; debugChunks.replaceChildren();
     answer.hidden = false;
     if (!question) {
       answer.textContent = '질문 내용을 입력해 주세요.';
@@ -121,6 +131,21 @@
       if (Array.isArray(data.sources)) {
         const pages = [...new Set(data.sources.map(source => source.page))];
         answer.textContent += '\n\n참고 문서: ai_challenge_guide.pdf' + (pages.length ? '\n검색한 부분: ' + pages.join(', ') + '페이지 (답변의 페이지 표시도 확인하세요)' : '\n검색한 문서에서 질문의 근거를 확인하지 못했습니다.');
+      }
+      if (Array.isArray(data.retrieved) && data.retrieved.length) {
+        for (const hit of data.retrieved) {
+          const item = document.createElement('li');
+          const title = document.createElement('strong');
+          title.textContent = `${hit.rank}위 · PDF ${hit.page}페이지 · ${hit.chunkId} → EXAONE 근거 ${hit.rank}`;
+          const scores = document.createElement('p');
+          scores.className = 'rag-debug-scores';
+          const fixed = value => Number(value).toFixed(3);
+          scores.textContent = `코사인: ${fixed(hit.cosineScore)} / 단어 일치: ${fixed(hit.keywordScore)} / 추가 점수(×0.6): ${fixed(hit.keywordBonus)} / 최종: ${fixed(hit.score)}`;
+          const text = document.createElement('p');
+          text.className = 'rag-debug-preview'; text.textContent = hit.preview;
+          item.append(title, scores, text); debugChunks.append(item);
+        }
+        debug.hidden = false;
       }
     } catch (error) {
       answer.textContent = error.name === 'TimeoutError' ? '응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.' : (error instanceof TypeError ? '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.' : error.message);
