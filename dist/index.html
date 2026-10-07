@@ -33,6 +33,29 @@
     <form id="ai-form" novalidate>
       <label for="ai-mode">질문 방식</label>
       <select id="ai-mode"><option value="rag">PDF 문서 질문 — 대회 안내서</option><option value="chat">일반 AI 질문</option><option value="public-data">공공데이터 제공신청 도우미</option></select>
+      <div id="application-method" hidden>
+        <label for="application-input-method">신청내용 입력 방식</label>
+        <select id="application-input-method"><option value="manual">직접 입력</option><option value="upload">신청서 Excel 업로드</option></select>
+      </div>
+      <section id="application-upload" class="application-upload" hidden aria-label="신청서 Excel 업로드">
+        <h3>신청서 Excel 업로드</h3>
+        <p>신청서에 포함된 성명, 생년월일, 주소, 전화번호, 이메일 등 개인정보는 업로드 전에 마스킹해 주세요.</p>
+        <p>접수번호·접수일·공공데이터 명칭·내용·활용 목적만 읽습니다. 파일을 저장하지 않으며, 업로드만으로 AI 분석을 시작하지 않습니다.</p>
+        <label for="application-file">신청서 파일 (.xlsx, 최대 2MB)</label>
+        <input id="application-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button id="application-extract" type="button">신청서 내용 추출</button>
+        <p id="application-upload-status" role="status" aria-live="polite"></p>
+        <fieldset id="application-preview" hidden>
+          <legend>추출 내용 확인·수정</legend>
+          <label for="application-receiptNumber">접수번호</label><input id="application-receiptNumber" maxlength="80">
+          <label for="application-receiptDate">접수일</label><input id="application-receiptDate" maxlength="40">
+          <label for="application-dataName">공공데이터 명칭</label><input id="application-dataName" maxlength="300">
+          <label for="application-content">공공데이터 내용</label><textarea id="application-content" rows="6" maxlength="10000"></textarea>
+          <label for="application-purpose">공공데이터 활용 목적</label><textarea id="application-purpose" rows="3" maxlength="700"></textarea>
+          <p>잘못 읽힌 항목은 수정하세요. 명칭·내용·목적을 합친 분석 요청은 2,000자 이내로 정리해 주세요. 접수번호와 접수일은 AI에 보내지 않습니다.</p>
+          <button id="application-confirm" type="button">내용 확인 후 분석하기</button>
+        </fieldset>
+      </section>
       <label for="ai-question">질문 내용</label>
       <textarea id="ai-question" rows="4" maxlength="2000" placeholder="예: 시민 교육 안내문은 어떻게 작성하면 좋을까요?" aria-describedby="ai-help" required></textarea>
       <label class="access-label" for="ai-access-code">실습 접속코드</label>
@@ -81,6 +104,7 @@
   <p class="mayor-note">이 창은 교육용 시안이며 공식 시장실이 아닙니다.</p>
 </dialog>
 <script src="public-data-ui.js"></script>
+<script src="application-upload-ui.js"></script>
 <script>
   const mayorDialog = document.getElementById('mayor-dialog');
   document.getElementById('mayor-open').addEventListener('click', () => mayorDialog.showModal());
@@ -101,7 +125,10 @@
   document.getElementById('ai-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const input = document.getElementById('ai-question');
-    const question = input.value.trim();
+    let submission;
+    try { submission = window.getApplicationSubmission(); }
+    catch (error) { const message = document.getElementById('ai-answer'); message.hidden = false; message.textContent = error.message; return; }
+    const question = submission ? submission.question : input.value.trim();
     const answer = document.getElementById('ai-answer');
     const publicDataResult = document.getElementById('public-data-result');
     publicDataResult.hidden = true; publicDataResult.replaceChildren();
@@ -121,12 +148,13 @@
     if (location.protocol === 'file:') { answer.textContent = '실제 AI는 서버를 통해 연결됩니다. 공개 홈페이지 또는 로컬 서버 주소에서 열어 주세요.'; return; }
     const button = event.currentTarget.querySelector('button[type="submit"]');
     button.disabled = true; button.textContent = '답변 생성 중…';
+    window.applicationUploadBusy(true);
     answer.setAttribute('aria-busy', 'true');
     answer.textContent = 'AI가 답변을 작성하고 있습니다…';
     try {
       const response = await fetch('/api/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, accessCode: codeInput.value.trim(), mode: document.getElementById('ai-mode').value }),
+        body: JSON.stringify({ question, accessCode: codeInput.value.trim(), mode: document.getElementById('ai-mode').value, ...(submission ? {application:submission.application} : {}) }),
         signal: AbortSignal.timeout(document.getElementById('ai-mode').value === 'public-data' ? 150000 : 55000),
       });
       const data = await response.json();
@@ -161,6 +189,7 @@
       answer.textContent = error.name === 'TimeoutError' ? '응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.' : (error instanceof TypeError ? '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.' : error.message);
     } finally {
       button.disabled = false; button.textContent = '질문하기';
+      window.applicationUploadBusy(false);
       answer.setAttribute('aria-busy', 'false');
     }
   });

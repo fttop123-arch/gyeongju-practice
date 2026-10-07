@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createApiHandler, apiStatus } from './api-handler.mjs';
 import { sampleExcelResponse } from './sample-excel.mjs';
+import { applicationUploadResponse } from './application-xlsx.mjs';
 let ragIndex = null;
 try { ragIndex = JSON.parse(await readFile(new URL('./data/rag-index.json', import.meta.url), 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -12,9 +13,15 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 const ask = createApiHandler(fetch, ragIndex, lawIndex);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
 assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];
+assets['/application-upload-ui.js'] = ['application-upload-ui.js', 'text/javascript; charset=utf-8'];
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1:8000');
+    if (url.pathname === '/api/application-upload') {
+      const request = new Request(url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})});
+      const result = await applicationUploadResponse(request,process.env);
+      res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
+    }
     if (url.pathname === '/api/sample-excel') {
       const request = new Request(url, { method: req.method, headers: req.headers, ...(req.method === 'POST' ? { body: req, duplex: 'half' } : {}) });
       const result = await sampleExcelResponse(request, process.env);

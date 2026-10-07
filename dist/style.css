@@ -18,3 +18,15 @@ nav{gap:24px}nav button{border:0;background:none;color:var(--blue);font-size:18p
 .public-data-law-evidence { grid-column: 1 / -1; padding: 22px; background: white; border: 1px solid #cbdedb; border-radius: 12px; overflow-wrap: anywhere; }
 .public-data-law-evidence details { margin-top: 14px; padding: 12px; background: #f2f8f6; }
 .public-data-law-evidence summary { cursor: pointer; font-weight: 700; }
+
+/* 신청서 업로드: 기존 카드와 같은 색과 간격을 사용합니다. */
+.application-upload{margin:16px 0;padding:20px;border:1px solid #c9ded9;border-radius:12px;background:#fff}
+.application-upload p{white-space:pre-wrap;line-height:1.7;color:var(--muted)}
+.application-upload input:not([type=file]){width:100%;padding:12px;border:1px solid #b8c9d5;border-radius:6px;font:inherit;box-sizing:border-box}
+.application-upload input[type=file]{max-width:100%;margin-bottom:12px}
+.application-upload fieldset{margin:18px 0 0;padding:16px;border:1px solid #c9ded9;border-radius:8px;min-width:0}
+.application-upload legend{font-weight:700;color:var(--green)}
+.application-upload button{padding:12px 18px;border:0;border-radius:8px;background:#117d63;color:white;font:inherit;cursor:pointer}
+.application-upload button:disabled{opacity:.55;cursor:wait}
+.application-identification{font-weight:700;overflow-wrap:anywhere}
+[hidden]{display:none!important}

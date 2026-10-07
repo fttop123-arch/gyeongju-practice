@@ -14,13 +14,13 @@ const questions = [
 ];
 try {
   await page.goto('http://127.0.0.1:8000');
-  await page.waitForFunction(()=>!document.querySelector('#ai-form button').disabled);
+  await page.waitForFunction(()=>!document.querySelector('#ai-form button[type="submit"]').disabled);
   await page.locator('#ai-access-code').fill(process.env.PRACTICE_ACCESS_CODE);
   for (const [mode,question] of [...questions.map(q=>['public-data',q]),['chat','3 더하기 5는 얼마인가요?'],['rag','세션1 평가항목을 알려주세요.']]) {
     await page.locator('#ai-mode').selectOption(mode); await page.locator('#ai-question').fill(question);
     const pending = page.waitForResponse(r=>r.url().endsWith('/api/ask'),{timeout:155000}); const started = Date.now();
-    await page.locator('#ai-form button').click(); const response = await pending; const data = await response.json();
-    await page.waitForFunction(()=>!document.querySelector('#ai-form button').disabled,{timeout:110000});
+    await page.locator('#ai-form button[type="submit"]').click(); const response = await pending; const data = await response.json();
+    await page.waitForFunction(()=>!document.querySelector('#ai-form button[type="submit"]').disabled,{timeout:110000});
     const screen = await page.locator('body').innerText();
     for (const [key,value] of Object.entries(process.env)) if (/KEY|TOKEN|SECRET|ACCESS_CODE/i.test(key) && value && (screen.includes(value) || JSON.stringify(data).includes(value))) throw new Error('비밀정보 표시 검사 실패');
     const result = {mode,question,http:response.status(),seconds:Math.round((Date.now()-started)/100)/10};

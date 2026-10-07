@@ -2,6 +2,7 @@
 import { getLlmConfiguration } from './llm-providers.mjs';
 import { answerWithRag } from './rag.mjs';
 import { analyzeWithPublicDataLaws } from './public-data-law-rag.mjs';
+import { applicationMetadata } from './application-metadata.mjs';
 export function apiStatus(env) {
   const config = getLlmConfiguration(env);
   return Response.json({ ready: Boolean(config?.apiKey && config?.model && env.PRACTICE_ACCESS_CODE && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
@@ -34,6 +35,11 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = n
     if (!data || typeof data !== 'object' || data.accessCode !== env.PRACTICE_ACCESS_CODE) return json({ error: '실습 접속코드를 확인해 주세요.' }, 401);
     const question = typeof data.question === 'string' ? data.question.trim() : '';
     if (!question || question.length > 2000) return json({ error: '질문을 1~2,000자로 입력해 주세요.' }, 400);
+    let application = null;
+    if (data.mode === 'public-data') {
+      try { application = applicationMetadata(data.application,env); }
+      catch { return json({error:'신청 건 정보의 길이와 내용을 확인해 주세요.'},400); }
+    }
     const now = Date.now();
     for (const [key, value] of usage) if (value.reset <= now) usage.delete(key);
     const client = request.headers.get('CF-Connecting-IP') || 'local';
@@ -42,7 +48,7 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = n
     count.count++; usage.set(client, count);
     try {
       if (data.mode === 'public-data') {
-        return json(await analyzeWithPublicDataLaws({question,env,config,index:lawIndex,fetchApi}));
+        return json({...await analyzeWithPublicDataLaws({question,env,config,index:lawIndex,fetchApi}),...(application ? {application} : {})});
       }
       if (data.mode === 'rag') {
         if (!ragIndex) return json({ error: 'PDF 검색 준비가 아직 완료되지 않았습니다.' }, 503);

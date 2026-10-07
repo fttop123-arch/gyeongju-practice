@@ -4,6 +4,11 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
   const notice = document.createElement('p'); notice.className = 'public-data-notice';
   notice.textContent = '신청내용을 정리한 검토용 초안입니다. 실제 데이터 조회 결과가 아닙니다. 확인되지 않은 항목은 추가 확인 필요이며, 예시값은 실제 현황이 아닙니다.';
   target.append(notice);
+  if (lawResult.application) {
+    const identification = document.createElement('p'); identification.className = 'public-data-notice application-identification';
+    identification.textContent = `접수번호: ${lawResult.application.receiptNumber || '추가 확인 필요'} · 공공데이터 명칭: ${lawResult.application.dataName || '추가 확인 필요'}`;
+    target.append(identification);
+  }
   const card = title => {
     const section = document.createElement('section'); section.className = 'public-data-card';
     const heading = document.createElement('h3'); heading.textContent = title; section.append(heading); target.append(section); return section;
@@ -46,7 +51,7 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
   download.addEventListener('click', async () => {
     download.disabled = true; status.textContent = 'Excel 파일을 생성하고 있습니다.';
     try {
-      const response = await fetch('/api/sample-excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({columns:analysis.columns.map(column => column.name), accessCode:document.getElementById('ai-access-code').value.trim()}), signal:AbortSignal.timeout(15000)});
+      const response = await fetch('/api/sample-excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({columns:analysis.columns.map(column => column.name), accessCode:document.getElementById('ai-access-code').value.trim(), ...(lawResult.application ? {application:lawResult.application} : {})}), signal:AbortSignal.timeout(15000)});
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Excel 생성에 실패했습니다.'); }
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a'); link.href = url; link.download = '공공데이터_제공신청_샘플.xlsx'; document.body.append(link); link.click(); link.remove();
