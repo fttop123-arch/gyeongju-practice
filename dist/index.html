@@ -26,6 +26,15 @@
       <button type="button" aria-disabled="true"><span class="service-number">04</span><strong>조직도</strong><span>부서와 담당 업무 안내</span></button>
     </div>
   </section>
+  <section class="wrap ai-assistant" aria-labelledby="ai-title">
+    <div class="section-head"><h2 id="ai-title">AI 업무도우미</h2><span>실제 AI 연결 없이 예시 답변을 보여주는 실습입니다</span></div>
+    <form id="ai-form" novalidate>
+      <label for="ai-question">질문 내용</label>
+      <textarea id="ai-question" rows="4" placeholder="예: 시민 교육 안내문은 어떻게 작성하면 좋을까요?" aria-describedby="ai-help" required></textarea>
+      <div class="ai-actions"><p id="ai-help">질문을 입력한 뒤 질문하기를 눌러 보세요.</p><button type="submit">질문하기</button></div>
+    </form>
+    <div id="ai-answer" class="ai-answer" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+  </section>
   <section class="news-area" id="news" aria-labelledby="news-title"><div class="wrap">
     <div class="section-head"><h2 id="news-title">경주의 소식</h2><span>모든 게시물은 가상의 실습 예시입니다</span></div>
     <div class="news-grid">
@@ -60,5 +69,21 @@
 <script>
   const mayorDialog = document.getElementById('mayor-dialog');
   document.getElementById('mayor-open').addEventListener('click', () => mayorDialog.showModal());
+  // 실제 AI 호출 대신 미리 준비한 예시 문구를 표시합니다.
+  document.getElementById('ai-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const input = document.getElementById('ai-question');
+    const question = input.value.trim();
+    const answer = document.getElementById('ai-answer');
+    answer.hidden = false;
+    if (!question) {
+      answer.textContent = '질문 내용을 입력해 주세요.';
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      return;
+    }
+    input.removeAttribute('aria-invalid');
+    answer.textContent = '입력한 질문: ' + question + '\n\n예시 답변\n업무를 진행할 때는 목적, 대상, 일정, 담당 부서와 필요한 자료를 먼저 정리해 보세요. 안내문은 제목 → 주요 내용 → 신청 방법 → 문의처 순서로 구성할 수 있습니다.\n\n이 답변은 미리 작성한 실습용 문구이며, 실제 AI가 질문을 분석한 결과가 아닙니다.';
+  });
 </script>
 </body></html>
