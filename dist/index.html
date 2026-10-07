@@ -30,6 +30,8 @@
     <div class="section-head"><h2 id="ai-title">AI 업무도우미</h2><span>AI 답변은 참고용이며 공식 안내가 아닙니다</span></div>
     <p id="ai-connection" role="status">AI 연결 상태를 확인하고 있습니다…</p>
     <form id="ai-form" novalidate>
+      <label for="ai-mode">질문 방식</label>
+      <select id="ai-mode"><option value="rag">PDF 문서 질문 — 대회 안내서</option><option value="chat">일반 AI 질문</option></select>
       <label for="ai-question">질문 내용</label>
       <textarea id="ai-question" rows="4" maxlength="2000" placeholder="예: 시민 교육 안내문은 어떻게 작성하면 좋을까요?" aria-describedby="ai-help" required></textarea>
       <label class="access-label" for="ai-access-code">실습 접속코드</label>
@@ -109,13 +111,17 @@
     try {
       const response = await fetch('/api/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, accessCode: codeInput.value.trim() }),
+        body: JSON.stringify({ question, accessCode: codeInput.value.trim(), mode: document.getElementById('ai-mode').value }),
         signal: AbortSignal.timeout(55000),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'AI 연결에 실패했습니다.');
       if (typeof data.answer !== 'string' || !data.answer.trim()) throw new Error('답변을 받지 못했습니다. 다시 시도해 주세요.');
       answer.textContent = data.answer;
+      if (Array.isArray(data.sources)) {
+        const pages = [...new Set(data.sources.map(source => source.page))];
+        answer.textContent += '\n\n참고 문서: ai_challenge_guide.pdf' + (pages.length ? '\n검색한 부분: ' + pages.join(', ') + '페이지 (답변의 페이지 표시도 확인하세요)' : '\n검색한 문서에서 질문의 근거를 확인하지 못했습니다.');
+      }
     } catch (error) {
       answer.textContent = error.name === 'TimeoutError' ? '응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.' : (error instanceof TypeError ? '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.' : error.message);
     } finally {

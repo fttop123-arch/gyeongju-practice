@@ -2,7 +2,10 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createApiHandler, apiStatus } from './api-handler.mjs';
-const ask = createApiHandler();
+let ragIndex = null;
+try { ragIndex = JSON.parse(await readFile(new URL('./data/rag-index.json', import.meta.url), 'utf8')); }
+catch (error) { if (error.code !== 'ENOENT') throw error; }
+const ask = createApiHandler(fetch, ragIndex);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
 createServer(async (req, res) => {
   try {

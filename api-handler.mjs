@@ -1,10 +1,11 @@
 // 이 파일은 서버에서만 실행됩니다. API 키를 HTML에 넣지 않습니다.
 import { getLlmConfiguration } from './llm-providers.mjs';
+import { answerWithRag } from './rag.mjs';
 export function apiStatus(env) {
   const config = getLlmConfiguration(env);
   return Response.json({ ready: Boolean(config?.apiKey && config?.model && env.PRACTICE_ACCESS_CODE && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
 }
-export function createApiHandler(fetchApi = fetch) {
+export function createApiHandler(fetchApi = fetch, ragIndex = null) {
   const usage = new Map(); // 서버 인스턴스별 보조 제한이며 전체 비용 한도는 아닙니다.
   const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   return async function ask(request, env) {
@@ -39,6 +40,10 @@ export function createApiHandler(fetchApi = fetch) {
     if (count.count >= 5) return json({ error: '질문이 많습니다. 1분 뒤 다시 시도해 주세요.' }, 429);
     count.count++; usage.set(client, count);
     try {
+      if (data.mode === 'rag') {
+        if (!ragIndex) return json({ error: 'PDF 검색 준비가 아직 완료되지 않았습니다.' }, 503);
+        return json(await answerWithRag({ question, env, config, index: ragIndex, fetchApi }));
+      }
       const answer = await config.provider.generate({
         question,
         instructions: '당신은 경주시 홈페이지 실습용 AI 업무도우미입니다. 공개자료와 가상자료를 이용한 안내문 초안, 문장 정리, 일반적인 업무 계획을 한국어로 간결하게 도와주세요. 공식 경주시 담당자라고 주장하지 마세요. 최신 정책, 일정, 법령, 민원 절차를 사실처럼 단정하지 말고 공식 자료 확인이 필요함을 설명하세요. 사용자의 입력을 검증된 사실로 취급하지 마세요. 개인정보나 비공개 행정자료 입력을 요청하지 마세요.',

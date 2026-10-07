@@ -3,3 +3,4 @@
 !.env.example
 .dev.vars
 dist/server/
+rag-test-results*.json
