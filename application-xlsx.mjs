@@ -49,7 +49,7 @@ export async function extractApplicationXlsx(bytes) {
   const styles=await read('xl/styles.xml'), dateFormats=new Set([14,15,16,17,18,19,20,21,22]), xfs=[];
   if(styles){for(const m of styles.matchAll(/<numFmt\b[^>]*\/?\s*>/g)){const f=formText(formAttr(m[0],'formatCode')).replace(/"[^"]*"|\[[^\]]*\]/g,'');if(/[yd]/i.test(f))dateFormats.add(Number(formAttr(m[0],'numFmtId')));}const body=styles.match(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/)?.[1]||'';for(const m of body.matchAll(/<xf\b[^>]*>/g))xfs.push(Number(formAttr(m[0],'numFmtId')));}
   const links=new Map();for(const m of rels.matchAll(/<Relationship\b[^>]*\/?\s*>/g)){if(formAttr(m[0],'TargetMode')==='External')continue;const target=formAttr(m[0],'Target');links.set(formAttr(m[0],'Id'),target.startsWith('/')?target.slice(1):'xl/'+target);}
-  const candidates={};let cellsSeen=0;
+  const candidates={};let cellsSeen=0, receiptFromD3='';
   for(const m of workbook.matchAll(/<sheet\b[^>]*\/?\s*>/g)){
     const path=links.get(formAttr(m[0],'r:id'));if(!path||!/^xl\/worksheets\//.test(path))continue;const xml=await read(path);if(!xml)continue;
     const cells=new Map(), merges=[];
@@ -66,6 +66,8 @@ export async function extractApplicationXlsx(bytes) {
     }
     for(const merge of xml.matchAll(/<mergeCell\b[^>]*\/?\s*>/g)){const [a,b]=formAttr(merge[0],'ref').split(':').map(formPosition);if(a&&b)merges.push({a,b});}
     const labelKey = value => Object.entries(formFields).find(([,labels])=>labels.includes(formLabel(value)))?.[0];
+    // 신청서 시트의 D3가 최우선입니다. 다른 항목은 기존 라벨 탐색을 유지합니다.
+    if(!receiptFromD3 && [...cells.values()].some(cell=>labelKey(cell.value))) receiptFromD3=cells.get('3,4')?.value || '';
     const privateLabel = value => /^(성명|신청인|생년월일|주소|전화번호|연락처|이메일|전자우편)$/.test(formLabel(value));
     for(const cell of cells.values()){
       const key=labelKey(cell.value);if(!key)continue;
@@ -83,6 +85,7 @@ export async function extractApplicationXlsx(bytes) {
   }
   const fields={},warnings=[];
   for(const key of Object.keys(formFields)){
+    if(key==='receiptNumber' && receiptFromD3){fields[key]=receiptFromD3;continue;}
     const values=[...(candidates[key]||[])];fields[key]=values.length===1?values[0]:'';
     if(!values.length)warnings.push(`신청서에서 '${formNames[key]}' 항목 값을 찾지 못했습니다. 확인 후 입력하거나 직접 입력 방식을 이용해 주세요.`);
     else if(values.length>1)warnings.push(`${formNames[key]} 값이 여러 개여서 자동 선택하지 않았습니다. 직접 확인해 입력해 주세요.`);
