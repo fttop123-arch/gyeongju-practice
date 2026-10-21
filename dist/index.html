@@ -1,39 +1,16 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>경주시 | 실습용 홈페이지 시안</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div class="practice">실습용 시안 — 경주시 공식 홈페이지가 아닙니다</div>
-<header class="wrap header">
-  <a class="logo" href="#home" aria-label="경주시 실습용 홈">경주시<span>GYEONGJU</span></a>
-  <nav aria-label="주요 메뉴"><a href="#services">종합민원</a><a href="#services">시민참여</a><a href="#news">경주소식</a><a href="#home">경주소개</a><a href="#services">분야별정보</a><button type="button" id="mayor-open" aria-haspopup="dialog">열린시장실</button></nav>
-</header>
-<main id="home">
-  <section class="hero wrap" aria-labelledby="hero-title">
-    <div class="hero-copy"><span class="eyebrow">천년의 도시, 새로운 내일</span><h1 id="hero-title">역사와 미래가<br>함께하는 경주시</h1><p>시민과 함께 만들어 가는 경주의 내일</p><span class="hero-tag">GYEONGJU · 시민과 함께</span></div>
-    <span class="photo-caption">경주의 천년을 담은 첨성대</span>
-  </section>
-  <section class="wrap services" id="services" aria-labelledby="services-title">
-    <div class="section-head"><h2 id="services-title">자주 찾는 서비스</h2><span>바로가기는 화면 구성 예시입니다</span></div>
-    <div class="service-grid">
-      <button type="button" aria-disabled="true"><span class="service-number">01</span><strong>민원신청</strong><span>생활 속 민원 안내</span></button>
-      <button type="button" aria-disabled="true"><span class="service-number">02</span><strong>공공서비스예약</strong><span>시설·프로그램 이용 안내</span></button>
-      <button type="button" aria-disabled="true"><span class="service-number">03</span><strong>관광정보</strong><span>경주에서 만나는 특별한 시간</span></button>
-      <button type="button" aria-disabled="true"><span class="service-number">04</span><strong>조직도</strong><span>부서와 담당 업무 안내</span></button>
-    </div>
-  </section>
-  <section class="wrap ai-assistant" aria-labelledby="ai-title">
-    <div class="section-head"><h2 id="ai-title">AI 업무도우미</h2><span>AI 답변은 참고용이며 공식 안내가 아닙니다</span></div>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Git/GitHub 버전관리 실습 중</p>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>경주시 AI 업무도우미</title><link rel="stylesheet" href="style.css"></head><body class="portal"><a class="skip-link" href="#ai-question">질문 입력으로 바로가기</a><header class="portal-header"><a href="#home" class="portal-logo"><span class="brand-symbol" aria-hidden="true">✳</span>경주시 <span>AI 업무포털</span></a><span class="education-label">교육·실습용</span></header><main id="home">  <section class="wrap ai-assistant" aria-labelledby="ai-title">
+    <div class="portal-intro"><span class="portal-badge">GYEONGJU · AI WORKSPACE</span><h1 id="ai-title">경주시 AI 업무도우미</h1><p>AI를 활용해 행정업무를 빠르게 지원합니다.</p></div>
     <p id="ai-connection" role="status">AI 연결 상태를 확인하고 있습니다…</p>
     <form id="ai-form" novalidate>
-      <label for="ai-mode">질문 방식</label>
-      <select id="ai-mode"><option value="rag">PDF 문서 질문 — 대회 안내서</option><option value="chat">일반 AI 질문</option><option value="public-data">공공데이터 제공신청 도우미</option></select>
-      <div id="application-method" hidden>
+      <label for="ai-mode" class="sr-only">질문 방식</label>
+      <select id="ai-mode" class="sr-only" tabindex="-1" aria-hidden="true"><option value="rag">PDF 문서 질문 — 대회 안내서</option><option value="chat" selected>일반 AI 질문</option><option value="public-data">공공데이터 제공신청 도우미</option></select>
+      <div class="composer"><div class="composer-heading"><span id="selected-mode">일반 AI 질문</span><span>공개자료·가상자료로 실습하세요</span></div><label for="ai-question" class="sr-only">질문 내용</label>
+      <textarea id="ai-question" rows="4" maxlength="2000" placeholder="무엇을 도와드릴까요?" aria-describedby="ai-help" required></textarea>
+      </div>
+      <label class="access-label" for="ai-access-code">실습 접속코드</label>
+      <input id="ai-access-code" type="password" autocomplete="off" placeholder="관리자에게 받은 접속코드" required>
+      <div class="ai-actions"><p id="ai-help">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p><button type="submit">질문하기</button></div>
+<div class="feature-heading"><h2>어떤 업무를 도와드릴까요?</h2><span>아래 기능을 선택해 시작하세요</span></div><div class="feature-grid" role="group" aria-label="AI 기능 선택"><button type="button" class="feature-card" data-mode="chat" aria-pressed="true"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 2v-10a9 9 0 0 1 18 0Z"/><path d="M7 10h8M7 14h5"/></svg></span><strong>일반 AI 질문</strong><span>일반적인 업무 질문</span><span class="selection-mark" aria-hidden="true">✓</span></button><button type="button" class="feature-card" data-mode="public-data" aria-pressed="false"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h3M13 16h3"/></svg></span><strong>공공데이터 제공신청 도우미</strong><span>제공신청 분석, 법령 근거, 샘플 Excel</span><span class="selection-mark" aria-hidden="true">✓</span></button><button type="button" class="feature-card" data-mode="rag" aria-pressed="false"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15"/></svg></span><strong>대회 안내서 RAG</strong><span>2026 공공 AI 대전환 챌린지 안내서 질문</span><span class="selection-mark" aria-hidden="true">✓</span></button><button type="button" class="feature-card upcoming" disabled><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span><strong>새로운 업무 지원</strong><span>더 다양한 기능을 준비하고 있습니다</span><small>준비중</small></button></div>      <div id="application-method" hidden>
         <label for="application-input-method">신청내용 입력 방식</label>
         <select id="application-input-method"><option value="manual">직접 입력</option><option value="upload">신청서 Excel 업로드</option></select>
       </div>
@@ -56,11 +33,6 @@
           <button id="application-confirm" type="button">내용 확인 후 분석하기</button>
         </fieldset>
       </section>
-      <label for="ai-question">질문 내용</label>
-      <textarea id="ai-question" rows="4" maxlength="2000" placeholder="예: 시민 교육 안내문은 어떻게 작성하면 좋을까요?" aria-describedby="ai-help" required></textarea>
-      <label class="access-label" for="ai-access-code">실습 접속코드</label>
-      <input id="ai-access-code" type="password" autocomplete="off" placeholder="관리자에게 받은 접속코드" required>
-      <div class="ai-actions"><p id="ai-help">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p><button type="submit">질문하기</button></div>
     </form>
     <div id="ai-answer" class="ai-answer" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <div id="public-data-result" class="public-data-result" aria-label="공공데이터 제공신청 분석 결과" hidden></div>
@@ -72,42 +44,18 @@
       <ol id="rag-debug-chunks"></ol>
     </details>
   </section>
-  <section class="news-area" id="news" aria-labelledby="news-title"><div class="wrap">
-    <div class="section-head"><h2 id="news-title">경주의 소식</h2><span>모든 게시물은 가상의 실습 예시입니다</span></div>
-    <div class="news-grid">
-      <article><div class="board-head"><h3>공지사항</h3><span>NOTICE</span></div><ul>
-        <li><span>[예시] 시민 디지털 교육 참여자 모집</span><time datetime="2026-10-06">2026.10.06</time></li>
-        <li><span>[예시] 생활민원 안내 창구 운영 안내</span><time datetime="2026-10-05">2026.10.05</time></li>
-        <li><span>[예시] 공공시설 이용 만족도 조사</span><time datetime="2026-10-02">2026.10.02</time></li>
-      </ul></article>
-      <article><div class="board-head"><h3>고시공고</h3><span>ANNOUNCEMENT</span></div><ul>
-        <li><span>[예시] 시민 참여 사업 제안 공고</span><time datetime="2026-10-06">2026.10.06</time></li>
-        <li><span>[예시] 공공 프로그램 운영자 모집</span><time datetime="2026-10-04">2026.10.04</time></li>
-        <li><span>[예시] 마을 환경 개선 의견 수렴</span><time datetime="2026-10-01">2026.10.01</time></li>
-      </ul></article>
-      <article><div class="board-head"><h3>행사안내</h3><span>EVENT</span></div><ul>
-        <li><span>[예시] 가을 문화 산책 주간</span><time datetime="2026-10-06">2026.10.06</time></li>
-        <li><span>[예시] 시민과 함께하는 미래도시 이야기</span><time datetime="2026-10-03">2026.10.03</time></li>
-        <li><span>[예시] 가족 체험 프로그램 안내</span><time datetime="2026-10-01">2026.10.01</time></li>
-      </ul></article>
-    </div>
-  </div></section>
-</main>
-<footer><div class="wrap footer-inner"><div class="footer-logo">경주시 <span>실습용 시안</span></div><p>교육용으로 제작한 홈페이지입니다. 민원 접수·예약 등 실제 서비스는 제공하지 않습니다.<br>게시물과 일정은 모두 가상 예시입니다.</p></div></footer>
-<div class="wrap photo-credit">사진: <a href="https://commons.wikimedia.org/wiki/File:Cheomseongdae-1.jpg" target="_blank" rel="noopener noreferrer">Zsinj / Wikimedia Commons</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a> · 배경 표시를 위한 크기·화면 영역 조정 및 음영 적용</div>
-<dialog id="mayor-dialog" aria-labelledby="mayor-title">
-  <form method="dialog"><button class="dialog-close" aria-label="열린시장실 닫기">닫기</button></form>
-  <span class="mayor-label">실습용 열린시장실</span>
-  <h2 id="mayor-title">경주시장 주낙영</h2>
-  <img class="mayor-photo" src="mayor.png" alt="경주시장 주낙영 사진" width="727" height="629">
-  <p class="mayor-source">사진 출처: <a href="https://www.gyeongju.go.kr/mayor/index.do" target="_blank" rel="noopener noreferrer">경주시 공식 열린시장실</a></p>
-  <p class="mayor-note">이 창은 교육용 시안이며 공식 시장실이 아닙니다.</p>
-</dialog>
-<script src="public-data-ui.js"></script>
+</main><footer class="portal-footer">AI 답변은 업무 검토를 위한 참고용입니다. 실제 제공 여부와 법령 적용은 기관의 검토로 최종 판단해 주세요.<br>경주시 공식 서비스가 아닌 교육용 실습 화면입니다.</footer><script>
+(() => {
+ const mode=document.getElementById('ai-mode'),cards=[...document.querySelectorAll('[data-mode]')];
+ const prompts={chat:'무엇을 도와드릴까요?','public-data':'공공데이터 제공신청 내용을 입력하거나 신청서를 업로드하세요.',rag:'대회 안내서에 대해 질문해 주세요.'};
+ function refresh(){cards.forEach(card=>{card.setAttribute('aria-pressed',String(card.dataset.mode===mode.value));card.disabled=mode.disabled;});document.getElementById('ai-question').placeholder=prompts[mode.value];document.getElementById('selected-mode').textContent=cards.find(card=>card.dataset.mode===mode.value).querySelector('strong').textContent;}
+ cards.forEach(card=>card.addEventListener('click',()=>{if(mode.disabled)return;mode.value=card.dataset.mode;mode.dispatchEvent(new Event('change'));}));
+ mode.addEventListener('change',()=>{refresh();['ai-answer','public-data-result','rag-debug'].forEach(id=>document.getElementById(id).hidden=true);});
+ new MutationObserver(refresh).observe(mode,{attributes:true,attributeFilter:['disabled']});refresh();
+})();
+</script><script src="public-data-ui.js"></script>
 <script src="application-upload-ui.js"></script>
 <script>
-  const mayorDialog = document.getElementById('mayor-dialog');
-  document.getElementById('mayor-open').addEventListener('click', () => mayorDialog.showModal());
   const connection = document.getElementById('ai-connection');
   const askButton = document.querySelector('#ai-form button[type="submit"]');
   askButton.disabled = true;
