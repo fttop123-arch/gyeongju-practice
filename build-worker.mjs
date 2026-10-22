@@ -1,7 +1,7 @@
 // 현재 디자인과 사진을 호스팅용 서버에 포함합니다. API 키는 포함하지 않습니다.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 const assets = {};
-for (const [name, type] of [['index.html','text/html; charset=utf-8'], ['style.css','text/css; charset=utf-8'], ['public-data-ui.js','text/javascript; charset=utf-8'], ['application-upload-ui.js','text/javascript; charset=utf-8'], ['cheomseongdae.jpg','image/jpeg'], ['mayor.png','image/png']]) {
+for (const [name, type] of [['index.html','text/html; charset=utf-8'], ['style.css','text/css; charset=utf-8'], ['help-manual.js','text/javascript; charset=utf-8'], ['public-data-ui.js','text/javascript; charset=utf-8'], ['application-upload-ui.js','text/javascript; charset=utf-8'], ['cheomseongdae.jpg','image/jpeg'], ['mayor.png','image/png']]) {
   assets['/' + name] = { type, data: (await readFile(new URL('./dist/' + name, import.meta.url))).toString('base64') };
 }
 assets['/'] = assets['/index.html'];

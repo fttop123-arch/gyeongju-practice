@@ -12,6 +12,7 @@ try { lawIndex = JSON.parse(await readFile(new URL('./data/public-data-law-index
 catch (error) { if (error.code !== 'ENOENT') throw error; }
 const ask = createApiHandler(fetch, ragIndex, lawIndex);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
+assets['/help-manual.js'] = ['help-manual.js', 'text/javascript; charset=utf-8'];
 assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];
 assets['/application-upload-ui.js'] = ['application-upload-ui.js', 'text/javascript; charset=utf-8'];
 createServer(async (req, res) => {
