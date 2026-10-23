@@ -10,7 +10,15 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 let lawIndex = null;
 try { lawIndex = JSON.parse(await readFile(new URL('./data/public-data-law-index.json', import.meta.url), 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
-const ask = createApiHandler(fetch, ragIndex, lawIndex);
+let organization = null;
+try {
+  const data = JSON.parse(await readFile(new URL('./data/organization.json', import.meta.url), 'utf8'));
+  if (!Array.isArray(data.employees) || data.employees.some(row => !row || ['department','name','phone','duties','team'].some(key => typeof row[key] !== 'string'))) throw new Error('INVALID_ORGANIZATION');
+  organization = data;
+} catch (error) {
+  if (error.code !== 'ENOENT') console.warn('조직도 참조 데이터를 읽지 못했습니다. 기존 AI 기능은 계속 사용할 수 있습니다.');
+}
+const ask = createApiHandler(fetch, ragIndex, lawIndex, organization);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
 assets['/help-manual.js'] = ['help-manual.js', 'text/javascript; charset=utf-8'];
 assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];

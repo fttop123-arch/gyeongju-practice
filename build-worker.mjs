@@ -5,6 +5,8 @@ for (const [name, type] of [['index.html','text/html; charset=utf-8'], ['style.c
   assets['/' + name] = { type, data: (await readFile(new URL('./dist/' + name, import.meta.url))).toString('base64') };
 }
 assets['/'] = assets['/index.html'];
+// 내부 조직도 데이터는 공개 Worker에 포함하지 않습니다. 검색 모듈만 포함하고 데이터는 null로 둡니다.
+const organizationSearch = await readFile(new URL('./organization-search.mjs', import.meta.url), 'utf8');
 const providers = await readFile(new URL('./llm-providers.mjs', import.meta.url), 'utf8');
 const embedding = await readFile(new URL('./embedding-provider.mjs', import.meta.url), 'utf8');
 const rag = (await readFile(new URL('./rag.mjs', import.meta.url), 'utf8')).replace("import { embedTexts } from './embedding-provider.mjs';", '');
@@ -15,8 +17,8 @@ const lawIndex = await readFile(new URL('./data/public-data-law-index.json',impo
 const metadata = await readFile(new URL('./application-metadata.mjs', import.meta.url), 'utf8');
 const upload = await readFile(new URL('./application-xlsx.mjs', import.meta.url), 'utf8');
 const sampleExcel = (await readFile(new URL('./sample-excel.mjs', import.meta.url), 'utf8')).replace("import { applicationMetadata } from './application-metadata.mjs';",'');
-const handler = (await readFile(new URL('./api-handler.mjs', import.meta.url), 'utf8')).replace("import { getLlmConfiguration } from './llm-providers.mjs';", '').replace("import { answerWithRag } from './rag.mjs';", '').replace("import { analyzePublicDataApplication } from './public-data-helper.mjs';", '').replace("import { analyzeWithPublicDataLaws } from './public-data-law-rag.mjs';",'');
-const code = providers + '\n' + embedding + '\n' + rag + '\n' + publicData + '\n' + lawRag + '\n' + metadata + '\n' + upload + '\n' + sampleExcel + '\n' + handler.replace("import { applicationMetadata } from './application-metadata.mjs';",'') + '\nconst ragIndex = ' + index + ';\nconst lawIndex = ' + lawIndex + ';\nconst ask = createApiHandler(fetch, ragIndex, lawIndex);\nconst assets = ' + JSON.stringify(assets) + `;
+const handler = (await readFile(new URL('./api-handler.mjs', import.meta.url), 'utf8')).replace("import { recommendOrganization } from './organization-search.mjs';",'').replace("import { getLlmConfiguration } from './llm-providers.mjs';", '').replace("import { answerWithRag } from './rag.mjs';", '').replace("import { analyzePublicDataApplication } from './public-data-helper.mjs';", '').replace("import { analyzeWithPublicDataLaws } from './public-data-law-rag.mjs';",'');
+const code = organizationSearch + '\n' + providers + '\n' + embedding + '\n' + rag + '\n' + publicData + '\n' + lawRag + '\n' + metadata + '\n' + upload + '\n' + sampleExcel + '\n' + handler.replace("import { applicationMetadata } from './application-metadata.mjs';",'') + '\nconst ragIndex = ' + index + ';\nconst lawIndex = ' + lawIndex + ';\nconst ask = createApiHandler(fetch, ragIndex, lawIndex);\nconst assets = ' + JSON.stringify(assets) + `;
 export default { async fetch(request, env) {
   const url = new URL(request.url);
   if (url.pathname === '/api/status' && request.method === 'GET') return apiStatus(env);

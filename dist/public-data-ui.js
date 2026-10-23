@@ -60,5 +60,25 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
     } catch (error) { status.textContent = error.name === 'TimeoutError' ? '생성 시간이 초과되었습니다. 다시 시도해 주세요.' : error.message; }
     finally { download.disabled = false; }
   });
+  const recommendation = lawResult.organizationRecommendation;
+  if (recommendation) {
+    const area = document.createElement('section'); area.className = 'organization-result';
+    const heading = document.createElement('h3'); heading.textContent = '추천 담당부서 및 담당자'; area.append(heading);
+    const note = document.createElement('p'); note.className = 'organization-notice'; note.textContent = recommendation.message; area.append(note);
+    const grid = document.createElement('div'); grid.className = 'organization-grid';
+    for (const candidate of recommendation.candidates || []) {
+      const article = document.createElement('article'); article.className = 'organization-person';
+      const rank = document.createElement('span'); rank.className = 'organization-rank'; rank.textContent = candidate.rank + '순위 · 담당자 후보';
+      const title = document.createElement('h4'); title.textContent = [candidate.department,candidate.team].filter(Boolean).join(' / ') || '부서 확인 필요';
+      const name = document.createElement('p'); name.className = 'organization-name'; name.textContent = candidate.name || '담당자명 확인 필요';
+      const phone = document.createElement('p'); phone.textContent = '☎ ' + (candidate.phone || '전화번호 확인 필요');
+      const duties = document.createElement('p'); duties.className = 'organization-duties'; duties.textContent = '담당업무: ' + candidate.duties;
+      const matches = document.createElement('div'); matches.className = 'organization-matches';
+      for (const match of candidate.matches || []) {const badge = document.createElement('span'); badge.textContent = match.keyword; badge.title = match.fields.join('·') + ' 일치 / ' + match.source; matches.append(badge);}
+      const score = document.createElement('p'); score.className = 'organization-score'; score.textContent = '키워드 일치 점수 ' + candidate.score + ' · 매칭 키워드';
+      article.append(rank,title,name,phone,duties,score,matches);grid.append(article);
+    }
+    area.append(grid); target.append(area);
+  }
   target.hidden = false;
 };

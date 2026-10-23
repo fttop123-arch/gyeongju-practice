@@ -6,3 +6,9 @@ dist/server/
 rag-test-results*.json
 data/public-data-law-index.pending.json
 data/public-data-law-index.json.tmp
+
+# 내부 조직도는 로컬에서만 사용합니다.
+data/organization*.json
+data/organization*.json.tmp
+data/organization*.xlsx
+__pycache__/

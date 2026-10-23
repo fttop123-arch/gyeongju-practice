@@ -3,11 +3,12 @@ import { getLlmConfiguration } from './llm-providers.mjs';
 import { answerWithRag } from './rag.mjs';
 import { analyzeWithPublicDataLaws } from './public-data-law-rag.mjs';
 import { applicationMetadata } from './application-metadata.mjs';
+import { recommendOrganization } from './organization-search.mjs';
 export function apiStatus(env) {
   const config = getLlmConfiguration(env);
   return Response.json({ ready: Boolean(config?.apiKey && config?.model && env.PRACTICE_ACCESS_CODE && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
 }
-export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = null) {
+export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = null, organization = null) {
   const usage = new Map(); // 서버 인스턴스별 보조 제한이며 전체 비용 한도는 아닙니다.
   const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   return async function ask(request, env) {
@@ -48,7 +49,9 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = n
     count.count++; usage.set(client, count);
     try {
       if (data.mode === 'public-data') {
-        return json({...await analyzeWithPublicDataLaws({question,env,config,index:lawIndex,fetchApi}),...(application ? {application} : {})});
+        const result = await analyzeWithPublicDataLaws({question,env,config,index:lawIndex,fetchApi});
+        const organizationRecommendation = recommendOrganization({question,analysis:result.analysis,organization});
+        return json({...result,organizationRecommendation,...(application ? {application} : {})});
       }
       if (data.mode === 'rag') {
         if (!ragIndex) return json({ error: 'PDF 검색 준비가 아직 완료되지 않았습니다.' }, 503);
