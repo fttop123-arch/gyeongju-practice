@@ -19,7 +19,7 @@ function sampleExcelValue(name, row) {
   else value = `예시 ${name.slice(0, 40)} ${letter}`;
   return `${value}(가상자료)`;
 }
-function excelZip(files) {
+export function excelZip(files) {
   // 압축하지 않은 표준 ZIP. 작은 샘플 파일이므로 외부 패키지가 필요 없습니다.
   const local = [], central = []; let offset = 0, centralLength = 0;
   const header = size => { const bytes = new Uint8Array(size); return [bytes, new DataView(bytes.buffer)]; };

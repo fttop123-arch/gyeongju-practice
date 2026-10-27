@@ -1,3 +1,6 @@
+import { siteAccessResponse } from './site-access.mjs';
+import { loadRegistrationCatalog } from './registration-catalog.mjs';
+import { createRegistrationHandler } from './registration-api.mjs';
 import { practiceAuth } from './practice-auth.mjs';
 // 별도 패키지 설치 없이 Node.js로 실행하는 로컬 서버입니다.
 import { createServer } from 'node:http';
@@ -19,15 +22,23 @@ try {
 } catch (error) {
   if (error.code !== 'ENOENT') console.warn('조직도 참조 데이터를 읽지 못했습니다. 기존 AI 기능은 계속 사용할 수 있습니다.');
 }
+const registration = createRegistrationHandler(fetch,loadRegistrationCatalog);
 const ask = createApiHandler(fetch, ragIndex, lawIndex, organization);
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/cheomseongdae.jpg': ['cheomseongdae.jpg', 'image/jpeg'], '/mayor.png': ['mayor.png', 'image/png'] };
 assets['/practice-auth-ui.js'] = ['practice-auth-ui.js', 'text/javascript; charset=utf-8'];
 assets['/help-manual.js'] = ['help-manual.js', 'text/javascript; charset=utf-8'];
 assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];
 assets['/application-upload-ui.js'] = ['application-upload-ui.js', 'text/javascript; charset=utf-8'];
+for (const name of ['registration-ui.mjs','registration-schema.mjs','csv-analysis.mjs','registration.css']) assets['/'+name]=[name,name.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8'];
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1:8000');
+    const gate=await siteAccessResponse(new Request(url,{method:req.method,headers:req.headers}),process.env);
+    if(gate){res.writeHead(gate.status,Object.fromEntries(gate.headers));res.end(Buffer.from(await gate.arrayBuffer()));return;}
+    if (['/api/registration-metadata','/api/registration-excel','/api/registration-catalog'].includes(url.pathname)) {
+      const request=new Request(url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})});
+      const result=await registration(request,process.env);res.writeHead(result.status,Object.fromEntries(result.headers));res.end(Buffer.from(await result.arrayBuffer()));return;
+    }
     if (url.pathname === '/api/auth') {
       const request = new Request(url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})});
       const result = await practiceAuth.handle(request,process.env);

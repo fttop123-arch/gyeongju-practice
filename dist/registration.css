@@ -1,0 +1,58 @@
+/* 등록 업무 전용. 다른 업무 화면의 디자인에는 적용하지 않습니다. */
+.portal .feature-card[data-mode=registration]{border-top-color:#77599b}
+.portal .feature-card[data-mode=registration] .feature-icon{background:#eee8f4;color:#77599b}
+#registration-workspace{margin-top:20px;min-width:0}
+#registration-workspace [hidden]{display:none!important}
+#registration-workspace h2{font-size:22px;color:var(--gj-deep);margin:0}
+#registration-workspace>.workspace-heading{margin-bottom:12px}
+#registration-workspace>.workspace-heading>span{font-size:12px;color:var(--gj-muted)}
+.registration-card{background:#fff;border:1px solid var(--gj-line);border-top:2px solid var(--gj-blue);border-radius:12px;padding:16px 18px;margin:12px 0;min-width:0}
+.registration-card h3{font-size:16px;color:#214859;margin:0 0 10px}
+.registration-card p{font-size:13px;color:#526c76;line-height:1.6;overflow-wrap:anywhere;margin:7px 0}
+.registration-card p:empty{display:none}
+.registration-auth{padding:0;margin:0 0 10px}
+#registration-auth .access-field{margin:0;gap:8px}
+.registration-upload-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.registration-card label:not(.registration-check){display:block;font-size:13px;color:#315362;font-weight:600;margin:0;min-width:0}
+.registration-card label>strong{display:block;margin:0 0 5px;font-size:13px}
+.registration-card input:not([type=checkbox]),.registration-card select,.registration-card textarea{box-sizing:border-box;width:100%;min-width:0;max-width:100%;border:1px solid #d4e0e1;background:#fff;border-radius:7px;padding:8px 10px;font:inherit;font-size:14px;color:#234b59;min-height:39px}
+.registration-card input[type=file]{padding:8px;background:#f8fafb;border-style:dashed;min-height:42px}
+.registration-card input[type=file]::file-selector-button{border:0;border-radius:5px;padding:6px 10px;margin-right:10px;background:#e5edf5;color:#214f72;cursor:pointer}
+.registration-card .registration-check{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.6;color:#365568;margin:8px 0;font-weight:400}
+.registration-card input[type=checkbox]{width:17px;height:17px;min-width:17px;padding:0;margin:2px 0;accent-color:#08786f}
+.portal .registration-card button{background:#005da3;color:#fff;border:1px solid #005da3;border-radius:7px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;line-height:1.5}
+.portal .registration-card button:hover{background:#004b85}
+.portal .registration-card button:disabled{opacity:.5;cursor:not-allowed}
+.portal .registration-card button.secondary{background:#fff;color:#315d70;border-color:#bdcccf}
+.portal #registration-final-download{background:#08786f;border-color:#08786f}
+.registration-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.registration-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 14px}
+.registration-fields .registration-name-field{grid-column:span 2}
+.registration-fields textarea{resize:vertical;min-height:42px;height:42px}
+.registration-recommendation{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 12px;border:1px solid #d9e5e9;background:#f6f9fb;border-radius:8px}
+.registration-recommendation>div{min-width:0}
+.registration-recommendation p{margin:2px 0;font-size:13px;color:#274a5a}
+.registration-recommendation button{flex-shrink:0}
+.registration-tools,.registration-advanced{margin:9px 0;font-size:13px;color:#526c76}
+.registration-tools summary,.registration-advanced summary{cursor:pointer;color:#365d70;line-height:1.7;min-height:24px}
+.registration-tools[open]>summary,.registration-advanced[open]>summary{margin-bottom:9px}
+.registration-tools p{font-size:12px;margin:6px 0}
+.registration-tools select{max-width:320px}
+#registration-payload{max-height:210px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f6f8;font-size:12px;padding:10px;border-radius:7px}
+#registration-evidence{border-left:2px solid #d5e1e6;padding-left:12px}
+.registration-confirmations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px}
+.registration-issues{padding-left:20px;font-size:13px;line-height:1.65;color:#805615;margin:6px 0;overflow-wrap:anywhere}
+.registration-card .registration-hint{font-size:12px;color:#637782;margin:8px 0}
+#registration-status,#registration-ai-status,#registration-download-status{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:1000px){.registration-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.registration-fields .registration-name-field{grid-column:auto}}
+@media(max-width:650px){#registration-workspace>.workspace-heading{flex-wrap:wrap;gap:4px}.registration-card{padding:14px 12px}.registration-fields,.registration-upload-row,.registration-confirmations{grid-template-columns:1fr}.registration-recommendation{align-items:stretch;flex-direction:column;gap:8px}.registration-card input:not([type=checkbox]),.registration-card select,.registration-card textarea{font-size:16px}.registration-actions button{flex:1}.registration-auth .access-field{flex-wrap:wrap}}
+
+/* 세 단계의 구분은 색상과 번호를 함께 사용합니다. */
+#registration-workspace .registration-card h3{font-size:23px;font-weight:800;line-height:1.35;letter-spacing:-.5px}
+#registration-input{background:#EFF6FF;border-color:#BFDBFE}
+#registration-input h3{color:#1D4ED8}
+#registration-review{background:#F0FDF4;border-color:#BBF7D0}
+#registration-review h3{color:#15803D}
+#registration-completion{background:#FFF7ED;border-color:#FED7AA}
+#registration-completion h3{color:#C2410C}
+@media(max-width:650px){#registration-workspace .registration-card h3{font-size:22px}}

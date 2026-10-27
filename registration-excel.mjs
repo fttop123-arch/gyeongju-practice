@@ -1,0 +1,19 @@
+import { excelZip } from './sample-excel.mjs';
+import { REGISTRATION_HEADERS, REGISTRATION_FIELDS, registrationIssues, registrationInitialFields, normalizeRegistrationKeywords } from './dist/registration-schema.mjs';
+import { validateRegistrationStructure } from './registration-metadata.mjs';
+export function validateRegistrationRecord(record){
+ if(!record||typeof record!=='object')throw Error('등록 검토 정보가 필요합니다.');
+ const structure=validateRegistrationStructure(record.structure),fields={};
+ for(const [key] of REGISTRATION_FIELDS){const v=record.fields?.[key]??registrationInitialFields()[key];if(typeof v!=='string'||v.length>2000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v))throw Error('등록 항목의 길이·형식을 확인하세요.');fields[key]=v.trim();}
+ fields.keywords=normalizeRegistrationKeywords([...new Set(fields.keywords.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean))]);
+ return {structure,fields,reviewed:record.reviewed===true,basisConfirmed:record.basisConfirmed===true};
+}
+export function createRegistrationExcel(records,{reviewOnly=false,catalog=null}={}){
+ if(!Array.isArray(records)||records.length<1||records.length>10)throw Error('RPA 호환 Excel은 1~10건만 생성합니다.');
+ const normalized=records.map(validateRegistrationRecord);
+ const rows=[REGISTRATION_HEADERS,...normalized.map((r,i)=>{const f=r.fields,s=r.structure,issues=registrationIssues(r,catalog);if(!reviewOnly&&issues.length)throw Error(issues.join('\n'));return [i+1,reviewOnly?'검토중':'미등록',f.dataName,f.keywords,f.cycle,f.system,f.database,reviewOnly?'':f.major,reviewOnly?'':f.minor,r.basisConfirmed?f.basis:'',f.language,f.collection,f.dataType,f.tableName,'',s.columnCount,f.k,f.kColumns,f.l,f.lColumns,f.referenceDate,s.fileName,[f.notes,...(reviewOnly?['검토용: RPA 등록 금지',`미검증 분류 후보: ${f.major} / ${f.minor}`,...issues]:[])].filter(Boolean).join(' / ')];})];
+ const esc=v=>String(v).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+ // 모든 문자열을 inlineStr로 기록하므로 =,+,-,@로 시작해도 수식으로 실행되지 않습니다.
+ const worksheet=`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:W${rows.length}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="23" width="25" customWidth="1"/></cols><sheetData>${rows.map((row,i)=>`<row r="${i+1}">${row.map((v,j)=>`<c r="${String.fromCharCode(65+j)}${i+1}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`).join('')}</row>`).join('')}</sheetData></worksheet>`;
+ return excelZip({'[Content_Types].xml':'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>','_rels/.rels':'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>','xl/workbook.xml':'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="등록대장" sheetId="1" r:id="rId1"/></sheets></workbook>','xl/_rels/workbook.xml.rels':'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>','xl/worksheets/sheet1.xml':worksheet});
+}
