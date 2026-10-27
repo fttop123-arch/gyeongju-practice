@@ -1,6 +1,10 @@
 // 업무 카드 표시만 담당합니다. API 키나 서버 설정을 사용하지 않습니다.
 window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
   target.replaceChildren();
+  const resultHeading = document.createElement('div'); resultHeading.className = 'analysis-heading';
+  const headingTitle = document.createElement('h2'); headingTitle.textContent = '공공데이터 신청 분석 결과';
+  const badge = document.createElement('span'); badge.className = 'review-badge'; badge.textContent = 'AI 제안 · 담당자 확인 필요';
+  resultHeading.append(headingTitle, badge); target.append(resultHeading);
   const notice = document.createElement('p'); notice.className = 'public-data-notice';
   notice.textContent = '신청내용을 정리한 검토용 초안입니다. 실제 데이터 조회 결과가 아닙니다. 확인되지 않은 항목은 추가 확인 필요이며, 예시값은 실제 현황이 아닙니다.';
   target.append(notice);
@@ -11,7 +15,7 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
   }
   const card = title => {
     const section = document.createElement('section'); section.className = 'public-data-card';
-    const heading = document.createElement('h3'); heading.textContent = title; section.append(heading); target.append(section); return section;
+    const heading = document.createElement('h3'); const number = document.createElement('span'); number.className = 'result-number'; number.textContent = String(target.querySelectorAll('.public-data-card').length + 1).padStart(2,'0'); heading.append(number, document.createTextNode(title)); section.append(heading); target.append(section); return section;
   };
   const paragraph = (title, value) => { const section = card(title); const p = document.createElement('p'); p.textContent = value; section.append(p); };
   const bullets = (title, values) => { const section = card(title); const ul = document.createElement('ul'); for (const value of values) { const li = document.createElement('li'); li.textContent = value; ul.append(li); } section.append(ul); };
@@ -38,7 +42,7 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
     const details = document.createElement('details');
     const summary = document.createElement('summary'); summary.textContent = `[근거 ${hit.rank}] ${hit.documentName} · ${hit.article} · PDF ${hit.pages.join(', ')}페이지 · ${hit.quotes.length ? '답변 참조 근거(PDF 원문)' : '검색 후보'}`;
     const score = document.createElement('p'); score.textContent = `코사인 ${hit.cosineScore.toFixed(3)} · 단어 점수 ${hit.keywordScore.toFixed(3)} · 범위 제목 보조점수 ${hit.scopeBonus.toFixed(3)} · 최종 점수 ${hit.score.toFixed(3)} (코사인 + 0.35 × 단어 점수 + 제목 보조점수)`;
-    const preview = document.createElement('p'); preview.textContent = (hit.quotes.length ? '답변의 근거 원문(앞부분): ' : '검색 후보 원문(앞부분): ') + hit.preview;
+    const preview = document.createElement('p'); preview.className = 'candidate-evidence'; preview.textContent = (hit.quotes.length ? '답변의 근거 원문(앞부분): ' : '검색 후보 원문(앞부분): ') + hit.preview;
     details.append(summary,score,preview);
     legal.append(details);
   }
@@ -49,9 +53,11 @@ window.renderPublicDataAnalysis = function (analysis, target, lawResult = {}) {
   status.textContent = '현재 권장 컬럼으로 가상자료 3행과 안내 시트를 만듭니다.';
   actions.append(download, status); target.append(actions);
   download.addEventListener('click', async () => {
+    if (!await window.practiceSession.ensure()) {status.textContent='실습 접속코드 인증이 필요합니다.';return;}
     download.disabled = true; status.textContent = 'Excel 파일을 생성하고 있습니다.';
     try {
-      const response = await fetch('/api/sample-excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({columns:analysis.columns.map(column => column.name), accessCode:document.getElementById('ai-access-code').value.trim(), ...(lawResult.application ? {application:lawResult.application} : {})}), signal:AbortSignal.timeout(15000)});
+      const response = await fetch('/api/sample-excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({columns:analysis.columns.map(column => column.name), ...(lawResult.application ? {application:lawResult.application} : {})}), signal:AbortSignal.timeout(15000)});
+      await window.practiceSession.handleResponse(response);
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Excel 생성에 실패했습니다.'); }
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a'); link.href = url; link.download = '공공데이터_제공신청_샘플.xlsx'; document.body.append(link); link.click(); link.remove();

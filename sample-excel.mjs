@@ -1,3 +1,4 @@
+import { practiceAuth } from './practice-auth.mjs';
 // 서버 전용: 컬럼명과 선택적 신청 건 정보로 API 호출 없이 작은 .xlsx 파일을 만듭니다.
 import { applicationMetadata } from './application-metadata.mjs';
 const excelNotice = '본 파일은 공공데이터 제공신청 업무 지원을 위한 샘플 파일이며 실제 행정자료가 아닙니다.';
@@ -66,7 +67,7 @@ export async function sampleExcelResponse(request, env) {
     const bytes = new Uint8Array(length); let offset = 0; for (const part of parts) {bytes.set(part,offset); offset += part.length;}
     data = JSON.parse(new TextDecoder().decode(bytes));
   } catch { return fail('요청 형식을 확인해 주세요.',400); }
-  if (!env.PRACTICE_ACCESS_CODE || data?.accessCode !== env.PRACTICE_ACCESS_CODE) return fail('실습 접속코드를 확인해 주세요.',401);
+  if (!await practiceAuth.authorized(request,env,data?.accessCode)) return fail('실습 접속코드를 확인해 주세요.',401);
   const names = data.columns;
   const secrets = Object.entries(env).filter(([k,v]) => /KEY|TOKEN|SECRET|PASSWORD|ACCESS_CODE/i.test(k) && typeof v === 'string' && v).map(([,v]) => v);
   if (!Array.isArray(names) || names.length < 1 || names.length > 12 || names.some(n => typeof n !== 'string' || !n.trim() || n.length > 2500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(n) || secrets.some(s => n.includes(s)))) return fail('현재 분석 결과의 컬럼명을 확인해 주세요.',400);

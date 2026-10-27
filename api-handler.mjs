@@ -1,3 +1,4 @@
+import { practiceAuth } from './practice-auth.mjs';
 // 이 파일은 서버에서만 실행됩니다. API 키를 HTML에 넣지 않습니다.
 import { getLlmConfiguration } from './llm-providers.mjs';
 import { answerWithRag } from './rag.mjs';
@@ -33,7 +34,7 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = n
       for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
       data = JSON.parse(new TextDecoder().decode(bytes));
     } catch { return json({ error: '질문 형식을 확인해 주세요.' }, 400); }
-    if (!data || typeof data !== 'object' || data.accessCode !== env.PRACTICE_ACCESS_CODE) return json({ error: '실습 접속코드를 확인해 주세요.' }, 401);
+    if (!data || typeof data !== 'object' || !await practiceAuth.authorized(request,env,data.accessCode)) return json({ error: '실습 접속코드를 확인해 주세요.' }, 401);
     const question = typeof data.question === 'string' ? data.question.trim() : '';
     if (!question || question.length > 2000) return json({ error: '질문을 1~2,000자로 입력해 주세요.' }, 400);
     let application = null;
