@@ -33,17 +33,18 @@
   };
   extract.addEventListener('click', async () => {
     preview.hidden = true; status.textContent = ''; refresh();
-    const selected = file.files[0], code = document.getElementById('ai-access-code').value.trim();
+    const selected = file.files[0];
     if (!selected) {status.textContent = '신청서 .xlsx 파일을 선택해 주세요.'; return;}
     if (!selected.name.toLowerCase().endsWith('.xlsx')) {status.textContent = '.xlsx 신청서 파일만 업로드할 수 있습니다.';return;}
     if (!selected.size) {status.textContent = '빈 파일입니다. 신청서가 들어 있는 .xlsx 파일을 선택해 주세요.';return;}
     if (selected.size > 2*1024*1024) {status.textContent = '2MB 이하의 신청서 파일을 선택해 주세요.';return;}
-    if (!code) {status.textContent = '아래 실습 접속코드를 먼저 입력해 주세요.';document.getElementById('ai-access-code').focus();return;}
+    if (!await window.practiceSession.ensure()) {status.textContent = '실습 접속코드 인증이 필요합니다.';return;}
     extracting = true; file.disabled = true; method.disabled = true; mode.disabled = true; refresh();
     status.textContent = '신청서 항목을 읽고 있습니다. AI는 아직 호출하지 않습니다.';
     try {
-      const body = new FormData(); body.append('file',selected); body.append('accessCode',code);
+      const body = new FormData(); body.append('file',selected);
       const response = await fetch('/api/application-upload',{method:'POST',body,signal:AbortSignal.timeout(30000)});
+      await window.practiceSession.handleResponse(response);
       const data = await response.json(); if (!response.ok) throw new Error(data.error || '신청서 내용을 읽지 못했습니다.');
       for (const key of keys) document.getElementById('application-'+key).value = data.fields[key] || '';
       preview.hidden = false;

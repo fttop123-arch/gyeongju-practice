@@ -1,3 +1,4 @@
+import { practiceAuth } from './practice-auth.mjs';
 // 서버용 .xlsx 신청서 읽기. 저장/AI 호출/수식 실행/외부 링크 요청을 하지 않습니다.
 const formFields = {receiptNumber:['접수번호'],receiptDate:['접수일','접수일자'],dataName:['공공데이터명칭','공공데이터명'],content:['공공데이터내용'],purpose:['공공데이터활용목적','활용목적']};
 const formNames = {receiptNumber:'접수번호',receiptDate:'접수일',dataName:'공공데이터 명칭',content:'공공데이터 내용',purpose:'공공데이터 활용 목적'};
@@ -104,7 +105,7 @@ export async function applicationUploadResponse(request,env) {
     while(true){const {done,value}=await reader.read();if(done)break;length+=value.length;if(length>2*1024*1024+16000){await reader.cancel();return fail('2MB 이하의 신청서 파일을 선택해 주세요.',413);}parts.push(value);}
     const bytes=new Uint8Array(length);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
     const form=await new Request(request.url,{method:'POST',headers:request.headers,body:bytes}).formData();
-    if(!env.PRACTICE_ACCESS_CODE||form.get('accessCode')!==env.PRACTICE_ACCESS_CODE)return fail('실습 접속코드를 확인해 주세요.',401);
+    if(!await practiceAuth.authorized(request,env,form.get('accessCode')))return fail('실습 접속코드를 확인해 주세요.',401);
     const file=form.get('file');if(!file||typeof file.arrayBuffer!=='function'||!file.name.toLowerCase().endsWith('.xlsx'))return fail('.xlsx 신청서 파일만 업로드할 수 있습니다.');
     if(file.size>2*1024*1024)return fail('2MB 이하의 신청서 파일을 선택해 주세요.',413);
     const result=await extractApplicationXlsx(new Uint8Array(await file.arrayBuffer()));

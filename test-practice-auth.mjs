@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {createPracticeAuth,practiceAuth} from './practice-auth.mjs';
+import {sampleExcelResponse} from './sample-excel.mjs';
+import {createApiHandler} from './api-handler.mjs';
+const env={PRACTICE_ACCESS_CODE:'test-only-code',HASA_API_KEY:'test-only-api-key',LLM_PROVIDER:'hasa',LLM_MODEL:'exaone-4.0-32b',HASA_BASE_URL:'https://open.hasa.re.kr/v1',HUB_CONNECTION_VERIFIED:'true'};
+const base='https://practice.test';let time=100000;const auth=createPracticeAuth({now:()=>time});
+const req=(method='GET',body=null,cookie='',origin=base)=>new Request(base+'/api/auth',{method,headers:{Origin:origin,'Content-Type':'application/json',Cookie:cookie},...(body?{body:JSON.stringify(body)}:{})});
+const login=await auth.handle(req('POST',{accessCode:env.PRACTICE_ACCESS_CODE}),env);assert.equal(login.status,200);const header=login.headers.get('set-cookie'),cookie=header.split(';')[0];assert(header.includes('HttpOnly'));assert(header.includes('Secure'));assert(header.includes('SameSite=Strict'));assert(header.includes('Max-Age=28800'));assert(!header.includes(env.PRACTICE_ACCESS_CODE));assert(!header.includes(env.HASA_API_KEY));const data=await login.json();assert.equal(data.expiresAt,time+28800000);assert(!JSON.stringify(data).includes(env.PRACTICE_ACCESS_CODE));assert(await auth.authorized(req('GET',null,cookie),env));assert(!await auth.authorized(req('GET',null,'practice_session='+'a'.repeat(64)),env));
+assert.equal((await auth.handle(req('POST',{accessCode:'wrong'}),env)).status,401);assert.equal((await auth.handle(req('POST',{accessCode:env.PRACTICE_ACCESS_CODE},'','https://other.test'),env)).status,403);
+assert.equal((await auth.handle(req('DELETE',null,cookie,'https://other.test'),env)).status,403);assert(await auth.authorized(req('GET',null,cookie),env));assert(!await createPracticeAuth().authorized(req('GET',null,cookie),env));
+const logout=await auth.handle(req('DELETE',null,cookie),env);assert.equal(logout.status,200);assert(logout.headers.get('set-cookie').includes('Max-Age=0'));assert(!await auth.authorized(req('GET',null,cookie),env));
+const again=await auth.handle(req('POST',{accessCode:env.PRACTICE_ACCESS_CODE}),env);const c2=again.headers.get('set-cookie').split(';')[0];time+=28800001;assert(!await auth.authorized(req('GET',null,c2),env));
+const rotation=await auth.handle(req('POST',{accessCode:env.PRACTICE_ACCESS_CODE}),env);assert(!await auth.authorized(req('GET',null,rotation.headers.get('set-cookie').split(';')[0]),{...env,PRACTICE_ACCESS_CODE:'changed-test-code'}));
+const a=await practiceAuth.handle(req('POST',{accessCode:env.PRACTICE_ACCESS_CODE}),env);const sharedCookie=a.headers.get('set-cookie').split(';')[0];
+const apiReq=(path,body,c=sharedCookie)=>new Request(base+path,{method:'POST',headers:{Origin:base,'Content-Type':'application/json',Cookie:c},body:JSON.stringify(body)});
+const ask=createApiHandler(async()=>Response.json({choices:[{message:{content:'가상 응답'}}]}));assert.equal((await ask(apiReq('/api/ask',{mode:'chat',question:'가상 질문'}),env)).status,200);assert.equal((await ask(apiReq('/api/ask',{mode:'chat',question:'가상 질문'},''),env)).status,401);assert.equal((await sampleExcelResponse(apiReq('/api/sample-excel',{columns:['가상 컬럼']}),env)).status,200);assert.equal((await sampleExcelResponse(apiReq('/api/sample-excel',{columns:['가상 컬럼']},''),env)).status,401);
+for(let i=0;i<5;i++)await auth.handle(req('POST',{accessCode:'wrong-again'}),env);assert.equal((await auth.handle(req('POST',{accessCode:'wrong-again'}),env)).status,429);
+console.log('PASS: HttpOnly·Secure·SameSite·8시간 만료·위조 거부·로그아웃 폐기·코드 변경·잘못된 Origin·로그인 제한');console.log('PASS: 질문/Excel API 쿠키 인증 및 미인증 거부 / 외부 AI 호출 0회');
