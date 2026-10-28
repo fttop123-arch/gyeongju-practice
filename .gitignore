@@ -12,3 +12,9 @@ data/organization*.json
 data/organization*.json.tmp
 data/organization*.xlsx
 __pycache__/
+
+# 내부망 RPA 입력/실행 결과는 외부 저장소·배포에 포함하지 않습니다.
+internal-rpa/등록자료/*
+!internal-rpa/등록자료/README.md
+internal-rpa/실행결과/*
+!internal-rpa/실행결과/README.md

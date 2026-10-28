@@ -30,7 +30,8 @@ export function validateRegistrationCandidates(raw,structure,{evidenceMode='name
  if([...keys,'keywords','evidence'].some(k=>!Object.hasOwn(value,k)))reject('JSON_REQUIRED_MISSING');
  if(Object.keys(value).some(k=>![...keys,'keywords','evidence',...(recommendBasis?['basisRecommendation']:[])].includes(k)))reject('JSON_SCHEMA_INVALID');
  let basisRecommendation=null;
- if(recommendBasis&&value.basisRecommendation!==undefined){const b=value.basisRecommendation;if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!['lawName','reason'].includes(k))||typeof b.lawName!=='string'||typeof b.reason!=='string'||b.lawName.length>150||b.reason.length>600||/[\u0000-\u001f]/.test(b.lawName+b.reason))reject('JSON_SCHEMA_INVALID');basisRecommendation={lawName:b.lawName.trim(),reason:b.reason.trim()};if(!basisRecommendation.lawName||!basisRecommendation.reason||!/(?:법|법률)$/.test(basisRecommendation.lawName)||/시행령|시행규칙|[,，;\/]|제\s*\d+\s*조/.test(basisRecommendation.lawName))basisRecommendation=null;}
+ let basisRecommendationState='not_suggested';
+ if(recommendBasis&&value.basisRecommendation!=null){const b=value.basisRecommendation;if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!['lawName','reason'].includes(k))||typeof b.lawName!=='string'||typeof b.reason!=='string'||b.lawName.length>150||b.reason.length>600||/[\u0000-\u001f]/.test(b.lawName+b.reason))reject('JSON_SCHEMA_INVALID');basisRecommendation={lawName:b.lawName.trim(),reason:b.reason.trim()};basisRecommendationState=basisRecommendation.lawName?'suggested':'not_suggested';if(!basisRecommendation.lawName||!basisRecommendation.reason||!/(?:법|법률)$/.test(basisRecommendation.lawName)||/시행령|시행규칙|[,，;\/]|제\s*\d+\s*조/.test(basisRecommendation.lawName)){basisRecommendationState=basisRecommendation.lawName?'rejected':'not_suggested';basisRecommendation=null;}}
  const result={};for(const key of keys){if(typeof value[key]!=='string'||value[key].length>2000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value[key]))reject('JSON_SCHEMA_INVALID');result[key]=value[key].trim();}
  if(!Array.isArray(value.keywords)||value.keywords.length>15||value.keywords.some(v=>typeof v!=='string'||!v.trim()||v.length>100||/[\r\n,]/.test(v)))reject('JSON_SCHEMA_INVALID');
  result.keywords=normalizeRegistrationKeywords(value.keywords);
@@ -58,7 +59,7 @@ export function validateRegistrationCandidates(raw,structure,{evidenceMode='name
  if(classificationRejected){result.major='';result.minor='';}
  const classificationState=!catalog?'unavailable':classificationRejected?'rejected':result.major&&result.minor?'suggested':'not_suggested';
  const classificationMessages={unavailable:'분류체계DB 미연결 · 검증 미완료',rejected:'AI가 반환한 분류 조합이 목록과 일치하지 않아 거부되었습니다. 담당자가 직접 선택하세요.',suggested:'AI가 가장 가까운 분류를 추천했습니다. 실제 업무에 맞지 않으면 변경하세요. · 분류 조합 검증 통과 · 담당자 수락·수정 필요',not_suggested:'AI가 분류를 추천하지 않았습니다. 검증에서 거부된 것이 아닙니다. CSV 구조의 업무 근거를 확인하고 직접 선택하세요.'};
- return {...(recommendBasis?{basisRecommendation}:{}),fields:result,evidence,classificationRejected,classificationState,classificationStatus:classificationMessages[classificationState],basisStatus:'근거 자료 미제공 · 담당자 직접 확인 필요'};
+ return {...(recommendBasis?{basisRecommendation,basisRecommendationState}:{}),fields:result,evidence,classificationRejected,classificationState,classificationStatus:classificationMessages[classificationState],basisStatus:'근거 자료 미제공 · 담당자 직접 확인 필요'};
 }
 export async function generateRegistrationMetadata({structure,config,fetchApi=fetch,catalog=null,recommendBasis=false,lawOc=''}){
  const safe=validateRegistrationStructure(structure);
@@ -71,7 +72,7 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
 4. 데이터설명과 DB테이블설명은 생성하지 않습니다. description/tableDescription 필드나 그 근거를 응답에 넣지 마세요. source=description도 사용하지 마세요. 분류와 법률 추천에 별도 데이터설명을 생성하지 말고 파일명·데이터명·컬럼명만 사용하세요.
 5. 아래 JSON 형식만 반환하세요. major/minor는 실제 목록의 정확한 문자열로 바꾸고 근거 ID는 실제 입력 ID를 선택하세요.
 {"dataName":"원본 파일명에서 확장자를 뺀 이름","keywords":["핵심 업무 검색어"],"major":"가장 가까운 허용 대분류","minor":"그 대분류의 가장 가까운 허용 중분류","basis":"","evidence":[{"field":"dataName","source":"filename"},{"field":"keywords","columnIds":["col_001"]},{"field":"major","source":"filename"},{"field":"minor","source":"columns","columnIds":["col_001"]}]}`;
- const basisInstructions=recommendBasis?'\n추가 보유근거 후보: CSV 파일명, 제안한 데이터명, 실제 컬럼명만 분석하여 가장 관련성 높은 실제 존재하는 현행 대한민국 법률 1개를 추천하세요. 법률 종류만 추천하고 시행령·시행규칙·조례·법률 조문 번호·복수 법률은 쓰지 마세요. 특정 법률을 예시로 강제하지 않습니다. 추천 법률명과 한 문장 100자 이내의 관련성 이유를 예시 JSON과 동일한 최상위 객체 안의 필드 "basisRecommendation":{"lawName":"실제 법률명 1개","reason":"업무 관련성 추천 이유"}에 작성하세요. 이름을 알 수 없으면 두 문자열을 비우세요. 법적 보유 권한·적법성·현행 여부를 확인했다고 주장하지 마세요. 확인은 별도 API가 수행합니다. fields에 해당하는 기존 basis는 반드시 빈 문자열로 두세요. basisRecommendation은 추천 전용으로 evidence의 field에 넣지 마세요. 별도 JSON 객체를 뒤에 이어 붙이거나 설명문을 출력하지 말고 객체 하나만 반환하세요.':'';
+ const basisInstructions=recommendBasis?'\n추가 보유근거 후보: CSV 파일명, 제안한 데이터명, 실제 컬럼명을 종합하여 관련 행정업무를 먼저 판단하고 가장 관련성 높은 실제 존재하는 현행 대한민국 법률 1개를 우선 추천하도록 시도하세요. 직접 대응하는 명칭이 없어도 업무 성격이 가장 가까운 실제 법률을 검토하세요. 법률 종류만 추천하고 시행령·시행규칙·조례·법률 조문 번호·복수 법률은 쓰지 마세요. 특정 법률을 예시로 강제하지 않습니다. 추천 법률명과 한 문장 100자 이내의 관련성 이유를 예시 JSON과 동일한 최상위 객체 안의 필드 "basisRecommendation":{"lawName":"실제 법률명 1개","reason":"업무 관련성 추천 이유"}에 작성하세요. 법률명과 업무 관련성 이유를 모두 작성하도록 우선 시도하세요. 실제 법률명을 전혀 알 수 없는 경우에만 두 문자열을 비우고, 임의의 법률명을 만들지 마세요. 법적 보유 권한·적법성·현행 여부를 확인했다고 주장하지 마세요. 확인은 별도 API가 수행합니다. fields에 해당하는 기존 basis는 반드시 빈 문자열로 두세요. basisRecommendation은 추천 전용으로 evidence의 field에 넣지 마세요. 별도 JSON 객체를 뒤에 이어 붙이거나 설명문을 출력하지 말고 객체 하나만 반환하세요.':'';
  const effectiveInstructions=recommendBasis?instructions.replace('"dataName":"원본 파일명에서 확장자를 뺀 이름"','"dataName":'+JSON.stringify(safe.fileName.replace(/\.csv$/i,''))).replace('"basis":""','"basis":"","basisRecommendation":{"lawName":"실제 법률명 1개","reason":"업무 관련성 한 문장"}'):instructions;
  const diagnostic={providerStatus:null,finishReason:null};
  // 최초 요청과 재시도 전체를 기존 45초 안에서 처리합니다. 브라우저 55초 제한은 그대로입니다.
@@ -94,19 +95,28 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
   }
   return response;
  };
- let retryReason='columns',basisFallback=null;
+ let retryReason='columns',basisFallback=null,bestBasis=null;
  for(let attempt=0;attempt<2;attempt++){
   diagnostic.providerStatus=null;diagnostic.finishReason=null;
   try{
    if(totalSignal.aborted)throw new RegistrationAiError('AI_TIMEOUT','provider_request',diagnostic);
-   const correction=!attempt?'':retryReason==='basis'?'\n직전 추천은 현행법령 목록에서 정확한 법률명·법률 종류로 확인되지 않았습니다. 다른 실제 대한민국 법률 1개를 추천하고 전체 JSON을 다시 작성하세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
+   const correction=!attempt?'':retryReason==='basis'?'\n직전 응답에 사용할 수 있는 보유근거 법률 후보가 없었습니다(빈값·형식 부적합 또는 공식 목록 불일치). 파일명·데이터명·실제 컬럼명을 다시 비교하여 관련 행정업무의 실제 대한민국 법률 1개와 추천 이유를 우선 제안하고 전체 JSON을 다시 작성하세요. 미검증을 확인 완료라고 주장하지 마세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
    const raw=await config.provider.generate({question:JSON.stringify(input),instructions:effectiveInstructions+basisInstructions+correction,model:config.model,apiKey:config.apiKey,baseUrl:config.baseUrl,fetchApi:observedFetch,maxTokens:2400});
    const result=validateRegistrationCandidates(raw,safe,{evidenceMode:'ids',catalog,recommendBasis});
+   if(recommendBasis){
+    const b=result.basisRecommendation;
+    const verification=await verifyRegistrationLawName(b?.lawName||'',{oc:lawOc,fetchApi,signal:totalSignal});
+    const current=b?{...b,verification,retried:attempt===1&&retryReason==='basis'}:null;
+    if(current&&verification.state!=='not_found')bestBasis=current;
+    const chosen=bestBasis||current;
+    result.basisRecommendation=chosen||{lawName:'',reason:'',verification:{state:'unverified',label:'법률명 미검증',reason:'추천 실패 — 직접 입력 필요'},retried:attempt===1&&retryReason==='basis'};
+    result.basisRecommendationState=bestBasis?'suggested':'failed';
+    result.basisStatus=bestBasis?bestBasis.verification.label+' · AI 관련 법률 후보이며 실제 보유근거는 담당자 확인 필요':'추천 실패 — 직접 입력 필요';
+    if(bestBasis&&bestBasis!==current)result.basisRecommendation={...bestBasis,preserved:true};
+   }
+   // 분류·컬럼·법률 재시도는 동일한 최대2회/45초 예산을 공유합니다.
    if(catalog&&['rejected','not_suggested'].includes(result.classificationState)&&attempt===0){retryReason='classification';continue;}
-   if(recommendBasis){const b=result.basisRecommendation;const verification=await verifyRegistrationLawName(b?.lawName||'',{oc:lawOc,fetchApi,signal:totalSignal});
-    if(b&&verification.state==='not_found'&&attempt===0){basisFallback={...result,basisRecommendation:{...b,verification,retried:true},basisStatus:'추천 법률명을 확인하지 못했습니다. 담당자가 직접 입력하세요.'};retryReason='basis';continue;}
-    result.basisRecommendation=b?{...b,verification,retried:attempt===1&&retryReason==='basis'}:{lawName:'',reason:'',verification:{state:'unverified',label:'법률명 미검증',reason:'AI 추천 법률명 없음'},retried:attempt===1&&retryReason==='basis'};
-    result.basisStatus=verification.label+' · 관련성은 AI 추천이며 담당자 확인 필요';}
+   if(recommendBasis&&!bestBasis&&attempt===0){basisFallback={...result,classificationRetried:false};retryReason='basis';continue;}
    return {...result,classificationRetried:attempt===1&&retryReason==='classification'};
   }catch(error){
    if(retryReason==='basis'&&basisFallback)return {...basisFallback,classificationRetried:false};

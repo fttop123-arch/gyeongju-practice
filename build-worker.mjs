@@ -4,7 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 const authCode = await readFile(new URL('./practice-auth.mjs', import.meta.url), 'utf8');
 const siteAccessCode=(await readFile(new URL('./site-access.mjs',import.meta.url),'utf8')).replace("import { practiceAuth } from './practice-auth.mjs';",'');
 const assets = {};
-for (const [name, type] of [['index.html','text/html; charset=utf-8'], ['style.css','text/css; charset=utf-8'], ...['registration-ui.mjs','registration-schema.mjs','csv-analysis.mjs'].map(n=>[n,'text/javascript; charset=utf-8']), ['registration.css','text/css; charset=utf-8'], ['practice-auth-ui.js','text/javascript; charset=utf-8'], ['help-manual.js','text/javascript; charset=utf-8'], ['public-data-ui.js','text/javascript; charset=utf-8'], ['application-upload-ui.js','text/javascript; charset=utf-8'], ['cheomseongdae.jpg','image/jpeg'], ['mayor.png','image/png']]) {
+for (const [name, type] of [['index.html','text/html; charset=utf-8'], ['style.css','text/css; charset=utf-8'], ...['registration-ui.mjs','registration-schema.mjs','registration-batch.mjs','csv-analysis.mjs'].map(n=>[n,'text/javascript; charset=utf-8']), ['registration.css','text/css; charset=utf-8'], ['practice-auth-ui.js','text/javascript; charset=utf-8'], ['help-manual.js','text/javascript; charset=utf-8'], ['public-data-ui.js','text/javascript; charset=utf-8'], ['application-upload-ui.js','text/javascript; charset=utf-8'], ['cheomseongdae.jpg','image/jpeg'], ['mayor.png','image/png']]) {
   assets['/' + name] = { type, data: (await readFile(new URL('./dist/' + name, import.meta.url))).toString('base64') };
 }
 assets['/'] = assets['/index.html'];

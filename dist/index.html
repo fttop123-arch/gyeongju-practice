@@ -33,15 +33,15 @@
       </section>
 <label for="ai-question" class="sr-only">질문 내용</label>
       <textarea id="ai-question" rows="3" maxlength="2000" placeholder="무엇을 도와드릴까요?" aria-describedby="ai-help" required></textarea>
-      <div class="composer-toolbar"><div class="access-field"><label class="access-label" for="ai-access-code">실습 접속코드</label><input id="ai-access-code" type="password" autocomplete="off" placeholder="관리자에게 받은 접속코드" required><button type="button" id="practice-login">인증</button><span id="practice-auth-status" role="status" aria-live="polite">인증 확인 중…</span><button type="button" id="practice-logout" hidden>로그아웃</button></div><div class="ai-actions"><button type="submit">질문하기</button></div></div></div><p id="ai-help" class="composer-note">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p>
+      <div class="composer-toolbar"><div class="access-field"><label class="access-label" for="ai-access-code">비밀번호</label><input id="ai-access-code" type="password" autocomplete="off" placeholder="비밀번호" required><button type="button" id="practice-login">로그인</button><span id="practice-auth-status" role="status" aria-live="polite">인증 확인 중…</span><button type="button" id="practice-logout" hidden>로그아웃</button></div><div class="ai-actions"><button type="submit">질문하기</button></div></div></div><p id="ai-help" class="composer-note">공개자료·가상자료만 입력하세요. 질문은 경북 Open AI Service Hub로 전송됩니다.</p>
     </form>
     <section id="registration-workspace" hidden aria-labelledby="registration-title">
-      <div class="workspace-heading"><h2 id="registration-title">공공데이터 등록 자동화</h2><span>CSV 1개 · 추천 검토 후 등록자료 준비</span></div>
+      <div class="workspace-heading"><h2 id="registration-title">공공데이터 등록 자동화</h2><span>CSV 최대 10개 · 선택한 1건 검토</span></div>
       <section class="registration-card" id="registration-input"><h3>① CSV 선택·AI 분석</h3>
         <div id="registration-auth" class="registration-auth"></div>
-        <div class="registration-upload-row"><label for="registration-file" class="sr-only">CSV 파일 선택</label><input id="registration-file" type="file" accept=".csv,text/csv"><button type="button" id="registration-generate" disabled>AI 등록정보 생성</button></div>
-        <p id="registration-status" role="status" aria-live="polite">CSV를 선택하면 구조를 자동 분석합니다.</p>
-        <label class="registration-check"><input id="registration-consent" type="checkbox">전송 범위를 확인했으며 개인정보·비공개 정보가 없는 구조정보의 외부 AI 전송에 동의합니다.</label>
+        <div id="registration-drop" class="registration-drop"><p>CSV를 여기에 놓거나 파일을 선택하세요. · 최대 10개</p><div class="registration-upload-row"><label for="registration-file" class="sr-only">CSV 파일 선택</label><input id="registration-file" type="file" multiple accept=".csv,text/csv"><button type="button" id="registration-generate" disabled>AI 등록정보 생성</button></div>
+        </div><ul id="registration-files" class="registration-file-list" aria-label="선택한 CSV 파일"></ul><p id="registration-status" role="status" aria-live="polite">CSV를 선택하면 구조를 자동 분석합니다.</p>
+        <p class="registration-hint">AI 생성 시 파일명·컬럼명 등 구조정보를 외부 AI에 전송합니다. 원본 행·셀은 전송하지 않습니다. 민감한 파일명·컬럼명은 제거하세요.</p>
         <details class="registration-tools"><summary>인코딩·AI 전송 정보 확인</summary>
           <p>원본 행·셀은 브라우저에서만 분석합니다. AI에는 파일명·컬럼명·자료형·행/열 수·결측 통계·분류명 목록을 보냅니다. 파일명·컬럼명의 민감정보도 제거하세요. 5MB / 50,000행 / 200열 이내 쉼표 구분 CSV를 지원합니다.</p>
           <label for="registration-encoding">인코딩</label><select id="registration-encoding"><option value="auto">BOM 확인 / UTF-8 우선</option><option value="utf-8">UTF-8</option><option value="euc-kr">CP949 / EUC-KR</option><option value="utf-16le">UTF-16 LE</option><option value="utf-16be">UTF-16 BE</option></select>
@@ -50,20 +50,21 @@
         <p id="registration-ai-status" role="status" aria-live="polite"></p>
       </section>
       <section id="registration-review" class="registration-card" hidden><h3>② 등록정보 검토·수정</h3>
-        <div id="registration-candidates" hidden>
-          <div class="registration-recommendation"><div><p id="registration-classification-summary"></p><p id="registration-basis-summary"></p></div><button type="button" id="registration-apply">AI 추천 적용</button></div>
-          <details class="registration-tools"><summary>추천 이유 보기</summary><div id="registration-evidence"></div><label class="registration-check"><input id="registration-overwrite" type="checkbox">직접 수정한 항목도 AI 추천으로 바꾸기</label></details>
+        <div class="registration-file-nav"><button type="button" id="registration-prev" class="secondary">◀ 이전</button><span id="registration-current"></span><button type="button" id="registration-next" class="secondary">다음 ▶</button><button type="button" id="registration-retry" class="secondary">이 파일 AI 다시 생성</button></div><div id="registration-candidates" hidden>
+          <div class="registration-recommendation"><div><p id="registration-classification-summary"></p><p id="registration-basis-summary"></p></div></div>
+          <details class="registration-tools"><summary>추천 이유 보기</summary><div id="registration-evidence"></div></details>
         </div>
-        <p class="registration-hint">AI 추천은 확정값이 아닙니다. 직접 수정한 값은 유지하며, 최종 검토는 담당자가 합니다.</p>
+        <p class="registration-hint">AI 추천은 수정 가능한 초안입니다. 정상 파일은 체크 없이 Excel에 포함됩니다. 미검증 법률은 업무 적합성을 확인하세요.</p>
         <div id="registration-fields" class="registration-fields"></div>
         <details class="registration-advanced"><summary>기타 Excel 항목</summary><div id="registration-advanced-fields" class="registration-fields"></div></details>
       </section>
       <section id="registration-completion" class="registration-card" hidden><h3>③ 확인·다운로드</h3>
-        <div class="registration-confirmations"><label class="registration-check"><input id="registration-basis" type="checkbox">보유근거를 실제 문서·규정과 대조했습니다.</label><label class="registration-check"><input id="registration-reviewed" type="checkbox">등록정보·분류·파일명을 최종 검토했습니다.</label></div>
+        <p id="registration-targets" role="status"></p>
         <details id="registration-validation" class="registration-tools"><summary id="registration-validation-summary">다운로드 확인사항</summary><ul id="registration-issues" class="registration-issues"></ul></details>
         <p id="registration-filename" class="registration-hint"></p>
-        <div class="registration-actions"><button type="button" id="registration-final-download" disabled>등록자료.xlsx 다운로드</button><button type="button" id="registration-reset" class="secondary">초기화</button></div>
-        <p id="registration-download-status" role="status" aria-live="polite"></p>
+        <div class="registration-actions"><button type="button" id="registration-final-download" disabled>등록자료.xlsx 다운로드</button><button type="button" id="registration-rpa-toggle" class="secondary" aria-expanded="false" aria-controls="registration-rpa-guide">포털 자동등록 안내</button><button type="button" id="registration-reset" class="secondary">초기화</button></div>
+        <section id="registration-rpa-guide" class="registration-rpa-guide" hidden aria-labelledby="registration-rpa-title"><h4 id="registration-rpa-title">공공데이터 포털 자동등록(RPA)</h4><ol><li>등록자료.xlsx를 다운로드합니다.</li><li>등록에 사용할 원본 CSV 파일을 준비합니다.</li><li>Excel과 CSV를 내부망 RPA의 지정된 작업 폴더에 저장합니다.</li><li>내부망 PC에서 RPA 실행 프로그램을 실행합니다.</li><li>포털 등록 결과를 확인합니다.</li></ol><p>이 홈페이지는 내부망 프로그램을 실행하지 않습니다. 사전검사 통과는 등록 성공이 아니며, 실행·등록 결과는 내부망 RPA에서 확인하세요. 지정 폴더는 기존 RPA 설정을 따릅니다.</p></section>
+        <p class="registration-hint">Excel에서 데이터명을 바꾸면 CSV 파일명도 일치해야 RPA에서 찾을 수 있습니다.</p><p id="registration-download-status" role="status" aria-live="polite"></p>
         <details class="registration-tools"><summary>분류 목록·검토용 Excel</summary><p id="registration-catalog-status" role="status">인증 후 분류 목록을 불러옵니다.</p><p>분류는 담당자 확인 전사본이며 공식 코드값·향후 변경은 미확인입니다. 법률명 확인은 업무 적합성·보유 권한의 확정이 아닙니다. 검토용 Excel은 RPA에 넣지 마세요.</p><div class="registration-actions"><button type="button" id="registration-catalog-reload" class="secondary">분류 목록 다시 확인</button><button type="button" id="registration-review-download" class="secondary">검토용 Excel 다운로드</button></div></details>
       </section>
     </section>
@@ -127,7 +128,7 @@
       return;
     }
     input.removeAttribute('aria-invalid');
-    if (!await window.practiceSession.ensure()) { answer.textContent = '실습 접속코드 인증이 필요합니다.'; return; }
+    if (!await window.practiceSession.ensure()) { answer.textContent = '비밀번호 인증이 필요합니다.'; return; }
     if (location.protocol === 'file:') { answer.textContent = '실제 AI는 서버를 통해 연결됩니다. 공개 홈페이지 또는 로컬 서버 주소에서 열어 주세요.'; return; }
     const button = document.querySelector('#ai-form button[type="submit"]');
     button.disabled = true; button.textContent = '답변 생성 중…';

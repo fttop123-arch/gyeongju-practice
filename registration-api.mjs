@@ -8,12 +8,12 @@ export function createRegistrationHandler(fetchApi=fetch,loadCatalog=async()=>nu
  return async function registrationResponse(request,env){
   const fail=(error,status=400)=>Response.json({error},{status,headers:{'Cache-Control':'no-store'}});
   if(new URL(request.url).pathname==='/api/registration-catalog'&&request.method==='GET'){
-   if(!await practiceAuth.authorized(request,env))return fail('실습 접속코드 인증이 필요합니다.',401);
+   if(!await practiceAuth.authorized(request,env))return fail('비밀번호 인증이 필요합니다.',401);
    try{const catalog=await loadCatalog();if(!catalog?.verified)throw Error();return Response.json(catalog,{headers:{'Cache-Control':'no-store'}});}catch{return fail('분류체계DB를 읽지 못했습니다. 관리자에게 파일과 분류 목록 확인을 요청하세요. 최종 다운로드는 차단됩니다.',503);}
   }
   if(request.method!=='POST')return fail('POST 요청만 허용됩니다.',405);
   if(request.headers.get('Origin')!==new URL(request.url).origin)return fail('현재 홈페이지에서 요청하세요.',403);
-  if(!await practiceAuth.authorized(request,env))return fail('실습 접속코드 인증이 필요합니다.',401);
+  if(!await practiceAuth.authorized(request,env))return fail('비밀번호 인증이 필요합니다.',401);
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return fail('JSON 요청이 필요합니다.',415);
   let data;try{
    const reader=request.body?.getReader();if(!reader)throw Error();let size=0;const parts=[];
@@ -34,7 +34,6 @@ export function createRegistrationHandler(fetchApi=fetch,loadCatalog=async()=>nu
     return new Response(bytes,{headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':"attachment; filename=registration.xlsx; filename*=UTF-8''"+encodeURIComponent(name),'Cache-Control':'no-store'}});
    }
    if(new URL(request.url).pathname!=='/api/registration-metadata')return fail('지원하지 않는 등록 API입니다.',404);
-   if(data.consent!==true)return fail('전송 범위 확인과 외부 AI 사용 동의가 필요합니다.');
    const structure=validateRegistrationStructure(data.structure);
    const config=getLlmConfiguration(env);
    if(!config?.apiKey||!config.model||(config.name==='hasa'&&env.HUB_CONNECTION_VERIFIED!=='true'))return fail('서버 AI 연결 설정을 확인하세요.',503);

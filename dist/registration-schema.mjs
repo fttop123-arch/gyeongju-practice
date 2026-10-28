@@ -10,11 +10,9 @@ export function registrationInitialFields(){return {...Object.fromEntries(REGIST
 export function normalizeRegistrationKeywords(value,{editing=false}={}){const normalized=(Array.isArray(value)?value.join(','):String(value??'')).replace(/\s*[,，]\s*/g,',');if(editing)return normalized;const seen=new Set();return normalized.split(',').map(v=>v.trim()).filter(v=>{const key=v.normalize('NFKC').toLowerCase();if(!v||seen.has(key))return false;seen.add(key);return true;}).join(',');}
 export function registrationIssues(record,catalog=null){
  const issues=[];const f=record.fields||{},s=record.structure||{};
- for(const [key,label] of [['dataName','데이터명'],['keywords','키워드'],['major','분류대'],['minor','분류중'],['basis','보유근거']])if(typeof f[key]!=='string'||!f[key].trim()||/확인\s*필요|미확인|추가 확인|검토 필요/.test(f[key]))issues.push(`${label}: 확정된 값이 필요합니다.`);
+ for(const [key,label] of [['dataName','데이터명'],['keywords','키워드'],['major','분류대'],['minor','분류중'],['basis','보유근거']])if(typeof f[key]!=='string'||!f[key].trim()||/확인\s*필요|미확인|추가 확인|검토 필요/.test(f[key]))issues.push(key==='basis'?'보유근거 입력 필요':`${label}: 등록값이 필요합니다.`);
  if(f.dataName&&(/[\\/:*?"<>|\u0000-\u001f]/.test(f.dataName)||`${f.dataName}.csv`!==s.fileName))issues.push('파일명 불일치: 데이터명 + .csv가 실제 CSV 파일명과 같아야 합니다.');
  if(!s.rowCount)issues.push('데이터 행이 없는 CSV는 최종 등록할 수 없습니다.');
- if(!record.reviewed)issues.push('담당자 검토 완료 확인이 필요합니다.');
- if(!record.basisConfirmed)issues.push('보유근거의 실제 근거 확인이 필요합니다.');
  if(!(catalog?.verified||catalog?.official)||!Array.isArray(catalog.entries)||!catalog.entries.some(x=>x.major===f.major&&x.minor===f.minor))issues.push('분류체계DB 로딩 또는 분류 조합 검증 미완료입니다.');
  if(f.referenceDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(f.referenceDate)||Number.isNaN(Date.parse(f.referenceDate))||new Date(f.referenceDate).toISOString().slice(0,10)!==f.referenceDate))issues.push('데이터기준일을 올바른 YYYY-MM-DD로 입력하세요.');
  return issues;

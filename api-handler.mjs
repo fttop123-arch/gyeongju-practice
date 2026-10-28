@@ -7,7 +7,7 @@ import { applicationMetadata } from './application-metadata.mjs';
 import { recommendOrganization } from './organization-search.mjs';
 export function apiStatus(env) {
   const config = getLlmConfiguration(env);
-  return Response.json({ ready: Boolean(config?.apiKey && config?.model && env.PRACTICE_ACCESS_CODE && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
+  return Response.json({ ready: Boolean(config?.apiKey && config?.model && practiceAuth.configured(env) && (config.name !== 'hasa' || env.HUB_CONNECTION_VERIFIED === 'true')), provider: config?.name || 'unconfigured' }, { headers: { 'Cache-Control': 'no-store' } });
 }
 export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = null, organization = null) {
   const usage = new Map(); // 서버 인스턴스별 보조 제한이며 전체 비용 한도는 아닙니다.
@@ -16,7 +16,7 @@ export function createApiHandler(fetchApi = fetch, ragIndex = null, lawIndex = n
     if (request.method !== 'POST') return json({ error: 'POST 요청만 가능합니다.' }, 405);
     if (request.headers.get('Origin') !== new URL(request.url).origin) return json({ error: '이 홈페이지에서 질문해 주세요.' }, 403);
     const config = getLlmConfiguration(env);
-    if (!config?.apiKey || !config?.model || !env.PRACTICE_ACCESS_CODE || (config.name === 'hasa' && env.HUB_CONNECTION_VERIFIED !== 'true')) return json({ error: '서버 API 연결 테스트와 설정이 아직 완료되지 않았습니다.' }, 503);
+    if (!config?.apiKey || !config?.model || !practiceAuth.configured(env) || (config.name === 'hasa' && env.HUB_CONNECTION_VERIFIED !== 'true')) return json({ error: '서버 API 연결 테스트와 설정이 아직 완료되지 않았습니다.' }, 503);
     if (!request.headers.get('Content-Type')?.startsWith('application/json')) return json({ error: '잘못된 요청 형식입니다.' }, 415);
     if (Number(request.headers.get('Content-Length')) > 16000) return json({ error: '질문이 너무 깁니다.' }, 413);
     let data;

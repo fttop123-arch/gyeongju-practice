@@ -29,7 +29,7 @@ assets['/practice-auth-ui.js'] = ['practice-auth-ui.js', 'text/javascript; chars
 assets['/help-manual.js'] = ['help-manual.js', 'text/javascript; charset=utf-8'];
 assets['/public-data-ui.js'] = ['public-data-ui.js', 'text/javascript; charset=utf-8'];
 assets['/application-upload-ui.js'] = ['application-upload-ui.js', 'text/javascript; charset=utf-8'];
-for (const name of ['registration-ui.mjs','registration-schema.mjs','csv-analysis.mjs','registration.css']) assets['/'+name]=[name,name.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8'];
+for (const name of ['registration-ui.mjs','registration-schema.mjs','registration-batch.mjs','csv-analysis.mjs','registration.css']) assets['/'+name]=[name,name.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8'];
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://127.0.0.1:8000');

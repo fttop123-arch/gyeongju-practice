@@ -1,3 +1,5 @@
+// SITE_ACCESS_PASSWORD가 명시되면 우선 사용합니다. 명시적 빈값은 잠금 상태이며 구 설정으로 우회하지 않습니다.
+function configuredSitePassword(env){if(Object.hasOwn(env,'SITE_ACCESS_PASSWORD'))return typeof env.SITE_ACCESS_PASSWORD==='string'&&env.SITE_ACCESS_PASSWORD.trim()?env.SITE_ACCESS_PASSWORD:'';return typeof env.PRACTICE_ACCESS_CODE==='string'?env.PRACTICE_ACCESS_CODE:'';}
 // HttpOnly 쿠키에는 무작위 ID·유효기간·HMAC 서명만 저장합니다. 암호/키 원문은 저장하지 않습니다.
 export function createPracticeAuth({now=()=>Date.now()}={}) {
   const revoked=new Map(), failures=new Map();
@@ -8,11 +10,11 @@ export function createPracticeAuth({now=()=>Date.now()}={}) {
   const clean=()=>{for(const [k,v] of revoked)if(v<=now())revoked.delete(k);for(const [k,v] of failures)if(v.until<=now())failures.delete(k);};
   const sameOrigin=request=>request.headers.get('Origin')===new URL(request.url).origin;
   const cookieHeader=(request,value,maxAge)=>`${cookieName}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${new URL(request.url).protocol==='https:'?'; Secure':''}`;
-  const signingKey=env=>crypto.subtle.importKey('raw',new TextEncoder().encode('practice-session-v1\0'+(env.HASA_API_KEY||'')+'\0'+env.PRACTICE_ACCESS_CODE),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
+  const signingKey=env=>crypto.subtle.importKey('raw',new TextEncoder().encode('practice-session-v1\0'+(env.HASA_API_KEY||'')+'\0'+configuredSitePassword(env)),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
   const signedData=(request,unsigned)=>new TextEncoder().encode(new URL(request.url).origin+'\n'+unsigned);
   const hex=bytes=>Array.from(new Uint8Array(bytes)).map(n=>n.toString(16).padStart(2,'0')).join('');
   async function session(request,env){
-    clean();const token=cookie(request);if(!env.PRACTICE_ACCESS_CODE||!/^v1\.[0-9]+\.[a-f0-9]{64}\.[a-f0-9]{64}$/.test(token))return null;
+    clean();const token=cookie(request);if(!configuredSitePassword(env)||!/^v1\.[0-9]+\.[a-f0-9]{64}\.[a-f0-9]{64}$/.test(token))return null;
     const parts=token.split('.'),expiresAt=Number(parts[1]);if(!Number.isSafeInteger(expiresAt)||expiresAt<=now()||expiresAt>now()+ttl||revoked.has(await digest(token)))return null;
     const signature=Uint8Array.from(parts[3].match(/../g),n=>parseInt(n,16));
     if(!await crypto.subtle.verify('HMAC',await signingKey(env),signature,signedData(request,parts.slice(0,3).join('.'))))return null;
@@ -21,18 +23,19 @@ export function createPracticeAuth({now=()=>Date.now()}={}) {
   async function revoke(request,env){const s=await session(request,env);if(s)revoked.set(await digest(cookie(request)),s.expiresAt);}
 
   return {
-    async authorized(request,env,legacyCode){return !!(await session(request,env))||!!(env.PRACTICE_ACCESS_CODE&&typeof legacyCode==='string'&&await equal(legacyCode,env.PRACTICE_ACCESS_CODE));},
+    configured(env){return !!configuredSitePassword(env);},
+    async authorized(request,env,legacyCode){return !!(await session(request,env))||!!(configuredSitePassword(env)&&typeof legacyCode==='string'&&await equal(legacyCode,configuredSitePassword(env)));},
     async handle(request,env){
       const json=(body,status=200,headers={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store',...headers}});
       if(request.method==='GET'){const s=await session(request,env);return json({authenticated:!!s,expiresAt:s?.expiresAt||null});}
       if(!sameOrigin(request))return json({error:'이 홈페이지에서 인증해 주세요.'},403);
       if(request.method==='DELETE')return this.logout(request,env);
       if(request.method!=='POST')return json({error:'지원하지 않는 인증 요청입니다.'},405);
-      if(!env.PRACTICE_ACCESS_CODE)return json({error:'서버 접속코드 설정을 확인해 주세요.'},503);
+      if(!configuredSitePassword(env))return json({error:'서버 로그인 설정을 확인해 주세요.'},503);
       clean();const client=request.headers.get('CF-Connecting-IP')||'local';const failed=failures.get(client);if(failed?.count>=5)return json({error:'인증 시도가 많습니다. 1분 후 다시 시도해 주세요.'},429);
       if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'인증 요청 형식을 확인해 주세요.'},415);
       let body;try{const reader=request.body?.getReader();if(!reader)throw Error();const parts=[];let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>4096){await reader.cancel();return json({error:'인증 요청이 너무 큽니다.'},413);}parts.push(value);}const bytes=new Uint8Array(size);let offset=0;for(const p of parts){bytes.set(p,offset);offset+=p.length;}body=JSON.parse(new TextDecoder().decode(bytes));}catch{return json({error:'인증 요청 형식을 확인해 주세요.'},400);}
-      if(typeof body?.accessCode!=='string'||!await equal(body.accessCode,env.PRACTICE_ACCESS_CODE)){if(failures.size>=10000&&!failures.has(client))return json({error:'잠시 후 다시 인증해 주세요.'},429);failures.set(client,{count:(failed?.count||0)+1,until:failed?.until||now()+60000});return json({error:'실습 접속코드를 확인해 주세요.'},401);}
+      if(typeof body?.accessCode!=='string'||!await equal(body.accessCode,configuredSitePassword(env))){if(failures.size>=10000&&!failures.has(client))return json({error:'잠시 후 다시 인증해 주세요.'},429);failures.set(client,{count:(failed?.count||0)+1,until:failed?.until||now()+60000});return json({error:'비밀번호를 확인해 주세요.'},401);}
       if(revoked.size>=10000)return json({error:'접속자가 많습니다. 잠시 후 다시 시도해 주세요.'},503);
       await revoke(request,env);const id=hex(crypto.getRandomValues(new Uint8Array(32))),expiresAt=now()+ttl;
       const unsigned='v1.'+expiresAt+'.'+id,signature=hex(await crypto.subtle.sign('HMAC',await signingKey(env),signedData(request,unsigned))),token=unsigned+'.'+signature;failures.delete(client);

@@ -56,3 +56,19 @@
 #registration-completion{background:#FFF7ED;border-color:#FED7AA}
 #registration-completion h3{color:#C2410C}
 @media(max-width:650px){#registration-workspace .registration-card h3{font-size:22px}}
+
+.registration-drop{border:1px dashed #9db8d9;border-radius:10px;padding:8px 10px;background:#ffffff80}
+.registration-drop.dragging{outline:3px solid #93c5fd;background:#fff}
+.registration-file-list{list-style:none;padding:0;margin:10px 0;max-height:190px;overflow:auto;overscroll-behavior:contain}
+.registration-file-list:empty{display:none}
+.registration-file-list li{display:flex;gap:6px;margin:5px 0;min-width:0}
+.portal .registration-file-list .registration-file-select{flex:1;min-width:0;text-align:left;background:#fff;color:#254a65;border-color:#c5d7e7;overflow-wrap:anywhere;padding:7px 10px}
+.portal .registration-file-list .registration-file-select[aria-pressed=true]{border-color:#1d4ed8;box-shadow:inset 3px 0 #1d4ed8;background:#eff6ff}
+.registration-file-nav{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+#registration-current{flex:1;min-width:140px;font-size:13px;font-weight:700;overflow-wrap:anywhere}
+#registration-targets{font-weight:700}
+@media(max-width:650px){#registration-current{order:-1;flex-basis:100%}.registration-file-nav button{flex:1}.registration-file-list{max-height:170px}}
+
+.registration-rpa-guide{background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px;margin-top:10px;overflow-wrap:anywhere}
+.registration-rpa-guide h4{font-size:15px;margin:0 0 6px;color:#9a3412}
+.registration-rpa-guide ol{padding-left:20px;margin:6px 0;font-size:13px;line-height:1.8}
