@@ -4,8 +4,8 @@ import { validateRegistrationStructure } from './registration-metadata.mjs';
 export function validateRegistrationRecord(record){
  if(!record||typeof record!=='object')throw Error('등록 검토 정보가 필요합니다.');
  const structure=validateRegistrationStructure(record.structure),fields={};
- for(const [key] of REGISTRATION_FIELDS){const v=record.fields?.[key]??registrationInitialFields()[key];if(typeof v!=='string'||v.length>2000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v))throw Error('등록 항목의 길이·형식을 확인하세요.');fields[key]=v.trim();}
- fields.keywords=normalizeRegistrationKeywords([...new Set(fields.keywords.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean))]);
+ for(const [key] of REGISTRATION_FIELDS){const raw=record.fields?.[key]??registrationInitialFields()[key];const v=key==='keywords'&&typeof raw==='string'?normalizeRegistrationKeywords(raw):raw;if(typeof raw==='string'&&raw.length>2000)throw Error('등록 항목의 길이·형식을 확인하세요.');if(typeof v!=='string'||v.length>2000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v))throw Error('등록 항목의 길이·형식을 확인하세요.');fields[key]=v.trim();}
+ fields.keywords=normalizeRegistrationKeywords(fields.keywords);
  return {structure,fields,reviewed:record.reviewed===true,basisConfirmed:record.basisConfirmed===true};
 }
 export function createRegistrationExcel(records,{reviewOnly=false,catalog=null}={}){
