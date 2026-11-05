@@ -1,6 +1,7 @@
 import { normalizeRegistrationKeywords } from './dist/registration-schema.mjs';
 import { verifyRegistrationLawName } from './registration-law-verifier.mjs';
 import { RegistrationAiError } from './registration-errors.mjs';
+const registrationRequiredKeys=['dataName','major','minor','basis','keywords','evidence'];
 // 원본 CSV/행/셀을 인자로 받지 않습니다. 허용된 구조 정보만 재구성합니다.
 export function validateRegistrationStructure(input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('CSV 구조 정보가 필요합니다.');
@@ -28,7 +29,8 @@ export function validateRegistrationCandidates(raw,structure,{evidenceMode='name
  let value;try{value=JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{reject('JSON_PARSE_FAILED','candidate_parse');}
  const keys=['dataName','major','minor','basis'];
  if(!value||typeof value!=='object'||Array.isArray(value))reject('JSON_SCHEMA_INVALID');
- if([...keys,'keywords','evidence'].some(k=>!Object.hasOwn(value,k)))reject('JSON_REQUIRED_MISSING');
+ const missingFields=registrationRequiredKeys.filter(k=>!Object.hasOwn(value,k));
+ if(missingFields.length){const error=new RegistrationAiError('JSON_REQUIRED_MISSING','candidate_validation');error.missingFields=missingFields;throw error;}
  if(Object.keys(value).some(k=>![...keys,'keywords','evidence',...(recommendBasis?['basisRecommendation']:[])].includes(k)))reject('JSON_SCHEMA_INVALID');
  let basisRecommendation=null;
  let basisRecommendationState='not_suggested';
@@ -63,7 +65,7 @@ export function validateRegistrationCandidates(raw,structure,{evidenceMode='name
  const classificationMessages={unavailable:'분류체계DB 미연결 · 검증 미완료',rejected:'AI가 반환한 분류 조합이 목록과 일치하지 않아 거부되었습니다. 담당자가 직접 선택하세요.',suggested:'AI가 가장 가까운 분류를 추천했습니다. 실제 업무에 맞지 않으면 변경하세요. · 분류 조합 검증 통과 · 담당자 수락·수정 필요',not_suggested:'AI가 분류를 추천하지 않았습니다. 검증에서 거부된 것이 아닙니다. CSV 구조의 업무 근거를 확인하고 직접 선택하세요.'};
  return {...(recommendBasis?{basisRecommendation,basisRecommendationState}:{}),fields:result,evidence,classificationRejected,classificationState,classificationStatus:classificationMessages[classificationState],basisStatus:'근거 자료 미제공 · 담당자 직접 확인 필요'};
 }
-export async function generateRegistrationMetadata({structure,config,fetchApi=fetch,catalog=null,recommendBasis=false,lawOc=''}){
+export async function generateRegistrationMetadata({structure,config,fetchApi=fetch,catalog=null,recommendBasis=false,lawOc='',onRetry=()=>{}}){
  const safe=validateRegistrationStructure(structure);
  const columns=safe.columns.map((c,i)=>({id:'col_'+String(i+1).padStart(3,'0'),...c}));
  const input={...safe,columns,allowedColumnIds:columns.map(c=>c.id),...(catalog?{allowedClassifications:catalog.entries}: {})};
@@ -107,12 +109,13 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
   INVALID_COLUMN_EVIDENCE:'컬럼 근거에는 허용된 field와 비어 있지 않은 columnIds 배열을 넣으세요. columns 이름으로 ID를 대체하지 마세요.',
   MISSING_FIELD_EVIDENCE:'값이 있는 각 dataName/keywords/major/minor에 대응하는 field의 근거를 빠짐없이 넣으세요.'
  };
- let retryReason='columns',evidenceFailure='',basisFallback=null,bestBasis=null;
+ let retryReason='columns',evidenceFailure='',missingRequiredFields=[],basisFallback=null,bestBasis=null,providerAttempts=0;
  for(let attempt=0;attempt<2;attempt++){
   diagnostic.providerStatus=null;diagnostic.finishReason=null;
   try{
    if(totalSignal.aborted)throw new RegistrationAiError('AI_TIMEOUT','provider_request',diagnostic);
-   const correction=!attempt?'':retryReason==='evidence'?'\n직전 응답은 EVIDENCE_VALIDATION_FAILED ('+evidenceFailure+')로 거부되었습니다. '+evidenceRetryHints[evidenceFailure]+' 기존 JSON 스키마와 모든 근거 검증 규칙을 지키며 같은 CSV의 전체 JSON 객체 하나를 다시 작성하세요. basis는 빈 문자열이며 basisRecommendation을 evidence의 field에 넣지 마세요.':retryReason==='basis'?'\n직전 응답에 사용할 수 있는 보유근거 법률 후보가 없었습니다(빈값·형식 부적합 또는 공식 목록 불일치). 파일명·데이터명·실제 컬럼명을 다시 비교하여 관련 행정업무의 실제 대한민국 법률 1개와 추천 이유를 우선 제안하고 전체 JSON을 다시 작성하세요. 미검증을 확인 완료라고 주장하지 마세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
+   const correction=!attempt?'':retryReason==='required'?'\n직전 응답은 JSON_REQUIRED_MISSING으로 거부되었습니다. 누락된 필수 키: '+missingRequiredFields.join(', ')+'. 입력에 맞는 전체 JSON 객체 하나를 다시 작성하고 dataName, major, minor, basis, keywords, evidence를 모두 포함하세요. basis는 빈 문자열로 명시하고 다른 필수 키도 생략하지 마세요. 필수항목·근거·컬럼 ID·분류 조합의 기존 검증을 모두 지키세요.':retryReason==='evidence'?'\n직전 응답은 EVIDENCE_VALIDATION_FAILED ('+evidenceFailure+')로 거부되었습니다. '+evidenceRetryHints[evidenceFailure]+' 기존 JSON 스키마와 모든 근거 검증 규칙을 지키며 같은 CSV의 전체 JSON 객체 하나를 다시 작성하세요. basis는 빈 문자열이며 basisRecommendation을 evidence의 field에 넣지 마세요.':retryReason==='basis'?'\n직전 응답에 사용할 수 있는 보유근거 법률 후보가 없었습니다(빈값·형식 부적합 또는 공식 목록 불일치). 파일명·데이터명·실제 컬럼명을 다시 비교하여 관련 행정업무의 실제 대한민국 법률 1개와 추천 이유를 우선 제안하고 전체 JSON을 다시 작성하세요. 미검증을 확인 완료라고 주장하지 마세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
+   providerAttempts++;
    const raw=await config.provider.generate({question:JSON.stringify(input),instructions:effectiveInstructions+basisInstructions+correction,model:config.model,apiKey:config.apiKey,baseUrl:config.baseUrl,fetchApi:observedFetch,maxTokens:2400});
    const result=validateRegistrationCandidates(raw,safe,{evidenceMode:'ids',catalog,recommendBasis});
    if(recommendBasis){
@@ -131,11 +134,13 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
    if(recommendBasis&&!bestBasis&&attempt===0){basisFallback={...result,classificationRetried:false};retryReason='basis';continue;}
    return {...result,classificationRetried:attempt===1&&retryReason==='classification'};
   }catch(error){
+   if(error instanceof RegistrationAiError)error.attempt=providerAttempts;
    if(retryReason==='basis'&&basisFallback)return {...basisFallback,classificationRetried:false};
    if(error instanceof RegistrationAiError){
     error.providerStatus??=diagnostic.providerStatus;error.finishReason??=diagnostic.finishReason;
-    if(error.code==='EVIDENCE_VALIDATION_FAILED'&&attempt===0){retryReason='evidence';evidenceFailure=Object.hasOwn(evidenceRetryHints,error.validationReason)?error.validationReason:'MISSING_FIELD_EVIDENCE';continue;}
-    if(error.code==='UNKNOWN_CSV_COLUMN'&&attempt===0){retryReason='columns';continue;}
+    if(error.code==='JSON_REQUIRED_MISSING'&&attempt===0){retryReason='required';missingRequiredFields=registrationRequiredKeys.filter(k=>Array.isArray(error.missingFields)&&error.missingFields.includes(k));onRetry(error);continue;}
+    if(error.code==='EVIDENCE_VALIDATION_FAILED'&&attempt===0){onRetry(error);retryReason='evidence';evidenceFailure=Object.hasOwn(evidenceRetryHints,error.validationReason)?error.validationReason:'MISSING_FIELD_EVIDENCE';continue;}
+    if(error.code==='UNKNOWN_CSV_COLUMN'&&attempt===0){onRetry(error);retryReason='columns';continue;}
     throw error;
    }
    throw new RegistrationAiError('UNEXPECTED_ERROR','generate',diagnostic);

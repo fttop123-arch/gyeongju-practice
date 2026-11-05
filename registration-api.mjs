@@ -41,8 +41,9 @@ export function createRegistrationHandler(fetchApi=fetch,loadCatalog=async()=>nu
    const used=usage.get(client)||{count:0,until:now+60000};if(used.count>=5||usage.size>10000)return fail('AI 후보 요청은 1분에 최대 5회입니다.',429);used.count++;usage.set(client,used);
    let catalog=null;try{catalog=await loadCatalog();}catch{}
    if(!catalog?.verified)return fail('분류체계DB를 읽지 못했습니다. AI 분류 추천과 최종 다운로드를 사용할 수 없습니다. 직접 검토와 검토용 Excel은 사용할 수 있습니다.',503);
-   let result;try{result=await generateRegistrationMetadata({structure,config,fetchApi,catalog,recommendBasis:true,lawOc:env.LAW_API_OC||''});}catch(error){
-    const diagnostic=registrationAiDiagnostic(error,crypto.randomUUID());
+   const requestId=crypto.randomUUID();
+   let result;try{result=await generateRegistrationMetadata({structure,config,fetchApi,catalog,recommendBasis:true,lawOc:env.LAW_API_OC||'',onRetry:error=>console.warn(JSON.stringify(registrationAiDiagnostic(error,requestId)))});}catch(error){
+    const diagnostic=registrationAiDiagnostic(error,requestId);
     console.warn(JSON.stringify(diagnostic));
     const [status,message]=REGISTRATION_AI_ERRORS[diagnostic.code];
     return Response.json({error:message+'\n확인 번호: '+diagnostic.requestId,code:diagnostic.code,requestId:diagnostic.requestId},{status,headers:{'Cache-Control':'no-store'}});

@@ -14,7 +14,9 @@ globalThis.fetch=async(url,options)=>{
  calls++;
  const input=JSON.parse(JSON.parse(options.body).messages[1].content);
  const count=(seen.get(input.fileName)||0)+1;seen.set(input.fileName,count);
- return Response.json({choices:[{message:{content:JSON.stringify({dataName:input.fileName.replace(/\.csv$/i,''),keywords:['가상','시설'],major:pair.major,minor:pair.minor,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 시험의 업무 관련 법률 후보'},evidence:input.fileName==='합성시설2.csv'&&count===1?[]:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))})}}]});
+ const candidate={dataName:input.fileName.replace(/\.csv$/i,''),keywords:['가상','시설'],major:pair.major,minor:pair.minor,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 시험의 업무 관련 법률 후보'},evidence:input.fileName==='합성시설2.csv'&&count===1?[]:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))};
+ if(input.fileName==='합성시설3.csv'&&count===1)delete candidate.keywords;
+ return Response.json({choices:[{message:{content:JSON.stringify(candidate)}}]});
 };
 const {default:worker}=await import('./dist/server/index.js');
 globalThis.fetch=nativeFetch;
@@ -34,7 +36,7 @@ for(const count of [3,4])test(`Worker HTTPS: 인증→합성 CSV ${count}개→�
   const response=await worker.fetch(request('/api/registration-metadata',{structure:item.structure},cookie,`case-${count}`),env);
   assert.equal(response.status,200);registrationAutoApply(item,await response.json(),catalog);items.push(item);
  }
- assert.equal(calls-before,count+1);assert.equal(seen.get('합성시설2.csv'),2);
+ assert.equal(calls-before,count+2);assert.equal(seen.get('합성시설2.csv'),2);assert.equal(seen.get('합성시설3.csv'),2);
  const plan=registrationDownloadPlan(items,catalog);assert.equal(plan.excluded.length,0);assert.equal(plan.included.length,count);
  const response=await worker.fetch(request('/api/registration-excel',{kind:'final',records:plan.included},cookie),env);
  assert.equal(response.status,200);assert.match(response.headers.get('Content-Disposition'),/filename\*=UTF-8/);

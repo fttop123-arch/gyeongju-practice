@@ -42,8 +42,9 @@ for(const [name,code,fetchApi,stage,providerStatus,finishReason] of cases)test(n
  try{
   const response=await createRegistrationHandler(fetchApi)(request(),env),body=await response.json();
   assert.equal(response.status,REGISTRATION_AI_ERRORS[code][0]);assert.equal(body.code,code);assert(body.error.startsWith(REGISTRATION_AI_ERRORS[code][1]));assert.match(body.requestId,/^[a-f0-9-]{36}$/);
-  assert.equal(logs.length,1);const log=JSON.parse(logs[0]);assert.deepEqual(Object.keys(log).sort(),['stage','code','providerStatus','finishReason','requestId'].sort());assert.deepEqual(log,{stage,code,providerStatus,finishReason,requestId:body.requestId});
-  for(const marker of [env.PRACTICE_ACCESS_CODE,env.HASA_API_KEY,cookie,structure.fileName,'가상컬럼','upstream-private-marker','private-network-marker','private-timeout-marker','unverified-basis-marker','private-unexpected-marker','private-finish-marker'])assert(!JSON.stringify({log,body}).includes(marker),'private details leaked');
+  const retried=['JSON_REQUIRED_MISSING','EVIDENCE_VALIDATION_FAILED','UNKNOWN_CSV_COLUMN'].includes(code);assert.equal(logs.length,retried?2:1);const log=JSON.parse(logs.at(-1));assert.deepEqual(log,{stage,code,providerStatus,finishReason,requestId:body.requestId,attempt:retried?2:1,...(code==='JSON_REQUIRED_MISSING'?{missingFields:['keywords']}:{})});
+  for(const s of logs){const entry=JSON.parse(s);assert.equal(entry.requestId,body.requestId);assert(Object.keys(entry).every(k=>['stage','code','providerStatus','finishReason','requestId','attempt','missingFields'].includes(k)));}
+  for(const marker of [env.PRACTICE_ACCESS_CODE,env.HASA_API_KEY,cookie,structure.fileName,'가상컬럼','upstream-private-marker','private-network-marker','private-timeout-marker','unverified-basis-marker','private-unexpected-marker','private-finish-marker'])assert(!JSON.stringify({logs,body}).includes(marker),'private details leaked');
   if(['UNKNOWN_CSV_COLUMN','BASIS_VALIDATION_FAILED','JSON_PARSE_FAILED','JSON_REQUIRED_MISSING'].includes(code))assert(!body.error.includes('API 키')&&!body.error.includes('서버 설정'));
  }finally{console.warn=old;}
 });

@@ -51,7 +51,7 @@ test('4개 CSV: 실패 파일만 1회 재시도, 성공3건 보존, 수동 재�
  const processItem=async item=>{const r=await api(request('/api/registration-metadata',{structure:item.structure}),env),body=await r.json();if(r.ok)registrationAutoApply(item,body,catalog);else{item.error=body.error;item.status='error';}};
  try{
   await createRegistrationQueue({interval:0}).run(items,processItem);
-  assert.deepEqual([...counts.values()],[1,2,1,1]);assert.equal(items[1].status,'error');assert.equal(logs.length,1);assert.equal(JSON.parse(logs[0]).code,'EVIDENCE_VALIDATION_FAILED');
+  assert.deepEqual([...counts.values()],[1,2,1,1]);assert.equal(items[1].status,'error');assert.equal(logs.length,2);assert.equal(JSON.parse(logs[0]).code,'EVIDENCE_VALIDATION_FAILED');assert.deepEqual(logs.map(s=>JSON.parse(s).attempt),[1,2]);
   assert.equal(registrationDownloadPlan(items,catalog).included.length,3);
   const successful=items.filter(i=>i!==items[1]),snapshots=successful.map(i=>JSON.stringify(i));
   recover=true;await processItem(items[1]);assert.equal(counts.get('합성시설2.csv'),3);assert.deepEqual(successful.map(i=>JSON.stringify(i)),snapshots);
