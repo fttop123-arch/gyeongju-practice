@@ -18,3 +18,33 @@ internal-rpa/등록자료/*
 !internal-rpa/등록자료/README.md
 internal-rpa/실행결과/*
 !internal-rpa/실행결과/README.md
+
+# 내부망 전용 RPA 원본의 주소 및 로컬 처리기록은 외부 전송하지 않습니다.
+# internal-rpa/data_register.py
+internal-rpa/등록자료.xlsx
+internal-rpa/.rpa-state/
+internal-rpa/.rpa-run.lock
+
+# 제출·개발 환경에서 추가로 제외할 자료
+.git/
+node_modules/
+*.pyc
+*.log
+internal-rpa/기관공유데이터_분류체계DB.xlsx
+internal-rpa/data_registe_백업r.py
+internal-rpa/실행결과/**
+!internal-rpa/실행결과/README.md
+internal-rpa/등록자료/**
+!internal-rpa/등록자료/README.md
+
+# 배포 준비 검증 산출물과 로컬 자격증명
+.local-qa/
+.dev.vars.*
+*.pem
+*.key
+# 업무 원본과 내부망 RPA는 웹 저장소 반영에서 제외
+*.csv
+*.xlsx
+# 웹 분류에 필요한 확인된 목록만 예외 (공개 가능 여부는 push 전 검토)
+!data/기관공유데이터_분류체계DB_사회복지추가.xlsx
+internal-rpa/
