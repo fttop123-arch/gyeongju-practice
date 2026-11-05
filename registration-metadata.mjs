@@ -22,7 +22,8 @@ export function validateRegistrationStructure(input){
  return {fileName,fileSize:input.fileSize,encoding:input.encoding,delimiter:',',rowCount:input.rowCount,columnCount:columns.length,columns};
 }
 export function validateRegistrationCandidates(raw,structure,{evidenceMode='names',catalog=null,recommendBasis=false}={}){
- const reject=(code,stage='candidate_validation')=>{throw new RegistrationAiError(code,stage);};
+ const reject=(code,stage='candidate_validation',validationReason)=>{const error=new RegistrationAiError(code,stage);if(validationReason)error.validationReason=validationReason;throw error;};
+ const rejectEvidence=reason=>reject('EVIDENCE_VALIDATION_FAILED','candidate_validation',reason);
  if(typeof raw!=='string'||!raw.trim())reject('AI_EMPTY_RESPONSE','provider_response');
  let value;try{value=JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{reject('JSON_PARSE_FAILED','candidate_parse');}
  const keys=['dataName','major','minor','basis'];
@@ -37,26 +38,26 @@ export function validateRegistrationCandidates(raw,structure,{evidenceMode='name
  result.keywords=normalizeRegistrationKeywords(value.keywords);
  if(!result.keywords||/[\u0000-\u001f]/.test(result.keywords))reject('JSON_SCHEMA_INVALID');
  if(result.basis)reject('BASIS_VALIDATION_FAILED');
- if(!Array.isArray(value.evidence)||value.evidence.length>30)reject('EVIDENCE_VALIDATION_FAILED');
+ if(!Array.isArray(value.evidence)||value.evidence.length>30)rejectEvidence('INVALID_EVIDENCE_LIST');
  const names=new Set(structure.columns.map(c=>c.name));
  const idToName=new Map(structure.columns.map((c,i)=>['col_'+String(i+1).padStart(3,'0'),c.name]));
  const classificationRejected=!!catalog&&!!(result.major||result.minor)&&!catalog.entries.some(e=>e.major===result.major&&e.minor===result.minor);
  const evidence=value.evidence.map(e=>{
-  if(e?.source==='description')reject('EVIDENCE_VALIDATION_FAILED');
+  if(e?.source==='description')rejectEvidence('DESCRIPTION_SOURCE');
   if(e?.source==='filename'){
-   if(!['major','minor','dataName','keywords'].includes(e.field)||Object.keys(e).some(k=>!['field','source'].includes(k)))reject('EVIDENCE_VALIDATION_FAILED');
-   if(e.field==='dataName'&&result.dataName!==structure.fileName.replace(/\.csv$/i,''))reject('EVIDENCE_VALIDATION_FAILED');
+   if(!['major','minor','dataName','keywords'].includes(e.field)||Object.keys(e).some(k=>!['field','source'].includes(k)))rejectEvidence('INVALID_FILENAME_EVIDENCE');
+   if(e.field==='dataName'&&result.dataName!==structure.fileName.replace(/\.csv$/i,''))rejectEvidence('DATA_NAME_MISMATCH');
    return {field:e.field,source:e.source,columns:[]};
   }
-  if(e?.source&&e.source!=='columns')reject('EVIDENCE_VALIDATION_FAILED');
+  if(e?.source&&e.source!=='columns')rejectEvidence('INVALID_SOURCE');
   const references=evidenceMode==='ids'?e?.columnIds:e?.columns;
-  if(!e||![...keys,'keywords'].includes(e.field)||!Array.isArray(references)||!references.length)reject('EVIDENCE_VALIDATION_FAILED');
+  if(!e||![...keys,'keywords'].includes(e.field)||!Array.isArray(references)||!references.length)rejectEvidence('INVALID_COLUMN_EVIDENCE');
   // 공백/대소문자 보정, 번역, 유사 이름 매칭을 하지 않습니다.
   if(references.some(n=>typeof n!=='string'||!(evidenceMode==='ids'?idToName.has(n):names.has(n))))reject('UNKNOWN_CSV_COLUMN');
   const columns=evidenceMode==='ids'?references.map(id=>idToName.get(id)):references;
   return {field:e.field,columns:[...new Set(columns)]};
  });
- for(const key of [...keys,'keywords'])if(result[key]&&!(classificationRejected&&['major','minor'].includes(key))&&!evidence.some(e=>e.field===key))reject('EVIDENCE_VALIDATION_FAILED');
+ for(const key of [...keys,'keywords'])if(result[key]&&!(classificationRejected&&['major','minor'].includes(key))&&!evidence.some(e=>e.field===key))rejectEvidence('MISSING_FIELD_EVIDENCE');
  if(classificationRejected){result.major='';result.minor='';}
  const classificationState=!catalog?'unavailable':classificationRejected?'rejected':result.major&&result.minor?'suggested':'not_suggested';
  const classificationMessages={unavailable:'분류체계DB 미연결 · 검증 미완료',rejected:'AI가 반환한 분류 조합이 목록과 일치하지 않아 거부되었습니다. 담당자가 직접 선택하세요.',suggested:'AI가 가장 가까운 분류를 추천했습니다. 실제 업무에 맞지 않으면 변경하세요. · 분류 조합 검증 통과 · 담당자 수락·수정 필요',not_suggested:'AI가 분류를 추천하지 않았습니다. 검증에서 거부된 것이 아닙니다. CSV 구조의 업무 근거를 확인하고 직접 선택하세요.'};
@@ -96,12 +97,22 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
   }
   return response;
  };
- let retryReason='columns',basisFallback=null,bestBasis=null;
+ // 고정된 분류만 재시도 지시에 사용합니다. AI 원문·근거 문자열을 다시 반사하지 않습니다.
+ const evidenceRetryHints={
+  INVALID_EVIDENCE_LIST:'evidence는 최대 30개의 근거 객체 배열이어야 합니다.',
+  DESCRIPTION_SOURCE:'source=description은 금지합니다. 파일명 또는 실제 컬럼 ID 근거만 사용하세요.',
+  INVALID_FILENAME_EVIDENCE:'source=filename의 객체에는 field와 source만 넣고 columnIds/columns를 넣지 마세요. field는 dataName/keywords/major/minor만 허용합니다.',
+  DATA_NAME_MISMATCH:'dataName은 입력 fileName에서 .csv만 제거한 이름과 정확히 일치해야 합니다.',
+  INVALID_SOURCE:'source는 filename 또는 columns만 사용하세요. 컬럼 근거에는 정확한 columnIds가 필요합니다.',
+  INVALID_COLUMN_EVIDENCE:'컬럼 근거에는 허용된 field와 비어 있지 않은 columnIds 배열을 넣으세요. columns 이름으로 ID를 대체하지 마세요.',
+  MISSING_FIELD_EVIDENCE:'값이 있는 각 dataName/keywords/major/minor에 대응하는 field의 근거를 빠짐없이 넣으세요.'
+ };
+ let retryReason='columns',evidenceFailure='',basisFallback=null,bestBasis=null;
  for(let attempt=0;attempt<2;attempt++){
   diagnostic.providerStatus=null;diagnostic.finishReason=null;
   try{
    if(totalSignal.aborted)throw new RegistrationAiError('AI_TIMEOUT','provider_request',diagnostic);
-   const correction=!attempt?'':retryReason==='basis'?'\n직전 응답에 사용할 수 있는 보유근거 법률 후보가 없었습니다(빈값·형식 부적합 또는 공식 목록 불일치). 파일명·데이터명·실제 컬럼명을 다시 비교하여 관련 행정업무의 실제 대한민국 법률 1개와 추천 이유를 우선 제안하고 전체 JSON을 다시 작성하세요. 미검증을 확인 완료라고 주장하지 마세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
+   const correction=!attempt?'':retryReason==='evidence'?'\n직전 응답은 EVIDENCE_VALIDATION_FAILED ('+evidenceFailure+')로 거부되었습니다. '+evidenceRetryHints[evidenceFailure]+' 기존 JSON 스키마와 모든 근거 검증 규칙을 지키며 같은 CSV의 전체 JSON 객체 하나를 다시 작성하세요. basis는 빈 문자열이며 basisRecommendation을 evidence의 field에 넣지 마세요.':retryReason==='basis'?'\n직전 응답에 사용할 수 있는 보유근거 법률 후보가 없었습니다(빈값·형식 부적합 또는 공식 목록 불일치). 파일명·데이터명·실제 컬럼명을 다시 비교하여 관련 행정업무의 실제 대한민국 법률 1개와 추천 이유를 우선 제안하고 전체 JSON을 다시 작성하세요. 미검증을 확인 완료라고 주장하지 마세요. 분류·컬럼 근거 검증도 유지하세요.':retryReason==='classification'?'\n직전 응답은 유효한 분류 추천을 얻지 못했습니다. 입력 allowedClassifications의 실제 조합 목록을 다시 비교하고 가장 가까운 정확한 major/minor 한 개와 실제 근거를 선택하세요. 없는 분류를 만들거나 첫 항목을 임의로 택하지 말고 전체 JSON을 다시 작성하세요.':'\n직전 응답의 근거 ID가 허용 목록에 없었습니다. 입력 allowedColumnIds의 정확한 문자열만 columnIds에 사용하고 전체 JSON을 다시 작성하세요.';
    const raw=await config.provider.generate({question:JSON.stringify(input),instructions:effectiveInstructions+basisInstructions+correction,model:config.model,apiKey:config.apiKey,baseUrl:config.baseUrl,fetchApi:observedFetch,maxTokens:2400});
    const result=validateRegistrationCandidates(raw,safe,{evidenceMode:'ids',catalog,recommendBasis});
    if(recommendBasis){
@@ -115,7 +126,7 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
     result.basisStatus=bestBasis?bestBasis.verification.label+' · AI 관련 법률 후보이며 실제 보유근거는 담당자 확인 필요':'추천 실패 — 직접 입력 필요';
     if(bestBasis&&bestBasis!==current)result.basisRecommendation={...bestBasis,preserved:true};
    }
-   // 분류·컬럼·법률 재시도는 동일한 최대2회/45초 예산을 공유합니다.
+   // 근거·분류·컬럼·법률 재시도는 CSV별 최초1회+재시도1회/전체45초 예산을 공유합니다.
    if(catalog&&['rejected','not_suggested'].includes(result.classificationState)&&attempt===0){retryReason='classification';continue;}
    if(recommendBasis&&!bestBasis&&attempt===0){basisFallback={...result,classificationRetried:false};retryReason='basis';continue;}
    return {...result,classificationRetried:attempt===1&&retryReason==='classification'};
@@ -123,6 +134,7 @@ export async function generateRegistrationMetadata({structure,config,fetchApi=fe
    if(retryReason==='basis'&&basisFallback)return {...basisFallback,classificationRetried:false};
    if(error instanceof RegistrationAiError){
     error.providerStatus??=diagnostic.providerStatus;error.finishReason??=diagnostic.finishReason;
+    if(error.code==='EVIDENCE_VALIDATION_FAILED'&&attempt===0){retryReason='evidence';evidenceFailure=Object.hasOwn(evidenceRetryHints,error.validationReason)?error.validationReason:'MISSING_FIELD_EVIDENCE';continue;}
     if(error.code==='UNKNOWN_CSV_COLUMN'&&attempt===0){retryReason='columns';continue;}
     throw error;
    }
