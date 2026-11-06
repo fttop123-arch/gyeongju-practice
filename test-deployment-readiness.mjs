@@ -14,7 +14,7 @@ globalThis.fetch=async(url,options)=>{
  calls++;
  const input=JSON.parse(JSON.parse(options.body).messages[1].content);
  const count=(seen.get(input.fileName)||0)+1;seen.set(input.fileName,count);
- const candidate={dataName:input.fileName.replace(/\.csv$/i,''),keywords:['가상','시설'],major:pair.major,minor:pair.minor,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 시험의 업무 관련 법률 후보'},evidence:input.fileName==='합성시설2.csv'&&count===1?[]:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))};
+ const candidate={dataName:input.fileName.replace(/\.csv$/i,''),keywords:['가상','시설','수량'],major:pair.major,minor:pair.minor,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 시험의 업무 관련 법률 후보'},evidence:input.fileName==='합성시설2.csv'&&count===1?[]:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))};
  if(input.fileName==='합성시설3.csv'&&count===1)delete candidate.keywords;
  return Response.json({choices:[{message:{content:JSON.stringify(candidate)}}]});
 };

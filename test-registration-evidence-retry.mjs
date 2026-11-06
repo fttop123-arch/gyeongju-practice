@@ -10,7 +10,7 @@ import {registrationBatchItem,registrationAutoApply,registrationDownloadPlan,cre
 const structure=analyzeCsv(new TextEncoder().encode('시설명,수량\nPRIVATE_SYNTHETIC_CELL,2'),'합성시설.csv');
 const config=getLlmConfiguration({LLM_PROVIDER:'hasa',LLM_MODEL:'synthetic-model',HASA_API_KEY:'synthetic-evidence-key'});
 const pair={major:'교통및물류',minor:'도로'},catalog={verified:true,entries:[pair]};
-const valid={dataName:'합성시설',keywords:['시설'],...pair,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 업무 관련 법률 후보'},evidence:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))};
+const valid={dataName:'합성시설',keywords:['시설','수량','운영'],...pair,basis:'',basisRecommendation:{lawName:'주차장법',reason:'합성 업무 관련 법률 후보'},evidence:['dataName','keywords','major','minor'].map(field=>({field,source:'filename'}))};
 const reply=value=>Response.json({choices:[{message:{content:JSON.stringify(value)},finish_reason:'stop'}]});
 const variants=[
  ['INVALID_EVIDENCE_LIST',{...valid,evidence:{}}],

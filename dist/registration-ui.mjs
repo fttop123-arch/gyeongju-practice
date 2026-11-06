@@ -1,5 +1,5 @@
 import {analyzeCsv} from './csv-analysis.mjs';
-import {REGISTRATION_FIELDS,REGISTRATION_AI_FIELDS,normalizeRegistrationKeywords} from './registration-schema.mjs';
+import {REGISTRATION_FIELDS,REGISTRATION_AI_FIELDS,normalizeRegistrationKeywords,registrationKeywordCount,REGISTRATION_MIN_KEYWORDS} from './registration-schema.mjs';
 import {registrationFileIssue,registrationBatchItem,registrationAutoApply,registrationBatchRecord,registrationDownloadPlan,registrationItemLabel,createRegistrationQueue} from './registration-batch.mjs';
 const regEl=id=>document.getElementById('registration-'+id),regMode=document.getElementById('ai-mode'),regForm=document.getElementById('ai-form');
 const regAuth=document.querySelector('.access-field'),regHome=regAuth.parentElement;
@@ -38,7 +38,7 @@ function refresh(){
  regEl('file').disabled=busy||analyzing||downloadBusy;regEl('generate').disabled=busy||analyzing||downloadBusy||!items.some(i=>i.structure&&!i.candidate&&!i.error);
  regEl('retry').disabled=busy||analyzing||downloadBusy||!item?.structure;regEl('catalog-reload').disabled=busy||analyzing||downloadBusy;regEl('encoding').disabled=busy||analyzing||downloadBusy||!item;
  regEl('prev').disabled=!item||items.indexOf(item)===0;regEl('next').disabled=!item||items.indexOf(item)===items.length-1;
- regEl('final-download').disabled=busy||analyzing||downloadBusy||!plan.included.length;regEl('review-download').disabled=busy||analyzing||downloadBusy||!valid.length;
+ regEl('final-download').disabled=busy||analyzing||downloadBusy||!plan.included.length;regEl('review-download').disabled=busy||analyzing||downloadBusy||!items.some(i=>i.structure&&registrationKeywordCount(i.fields.keywords)>=REGISTRATION_MIN_KEYWORDS);
  regEl('targets').textContent=`선택 ${items.length}건 · AI 생성 완료 ${items.filter(i=>i.candidate&&!i.error).length}건 · 정상 ${plan.included.length}건 · 확인 필요 ${plan.excluded.length}건 · Excel 다운로드 대상 ${plan.included.length}건`;
  regEl('issues').replaceChildren(...plan.excluded.map(e=>{const li=document.createElement('li');li.textContent=`제외 · ${e.fileName}: ${e.reasons.join(' / ')}`;return li;}));regEl('validation').hidden=!plan.excluded.length;regEl('validation-summary').textContent=`제외 파일·확인사항 ${plan.excluded.length}건`;
  if(item){regEl('current').textContent=`${items.indexOf(item)+1} / ${items.length} · ${item.file.name}`;
@@ -73,7 +73,7 @@ async function generate(targets){if(busy||analyzing||downloadBusy||queue.running
 regEl('generate').addEventListener('click',()=>generate(items.filter(i=>i.structure&&!i.candidate&&!i.error)));
 regEl('retry').addEventListener('click',()=>generate(active()?.structure?[active()]:[]));
 for(const [id,kind] of [['review-download','review'],['final-download','final']])regEl(id).addEventListener('click',async()=>{
- if(busy||analyzing||downloadBusy)return;const records=kind==='final'?registrationDownloadPlan(items,catalog).included:items.filter(i=>i.structure).map(registrationBatchRecord);if(!records.length)return;
+ if(busy||analyzing||downloadBusy)return;const records=kind==='final'?registrationDownloadPlan(items,catalog).included:items.filter(i=>i.structure&&registrationKeywordCount(i.fields.keywords)>=REGISTRATION_MIN_KEYWORDS).map(registrationBatchRecord);if(!records.length)return;
  const runEpoch=epoch;if(!await window.practiceSession.ensure()||runEpoch!==epoch)return;downloadBusy=true;const controller=new AbortController();abort=controller;refresh();
  try{const response=await fetch('/api/registration-excel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,records}),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(20000)])});await window.practiceSession.handleResponse(response);if(!response.ok)throw Error((await response.json()).error||'Excel 생성 실패');const blob=await response.blob();if(runEpoch!==epoch)return;const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=kind==='final'?'등록자료.xlsx':'등록자료_검토용.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);regEl('download-status').textContent=`${link.download} 다운로드 완료 · ${records.length}건`;
  }catch(e){if(runEpoch===epoch)regEl('download-status').textContent=e.message;}finally{if(runEpoch===epoch){downloadBusy=false;refresh();}}

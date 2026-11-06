@@ -10,9 +10,9 @@ import {createRegistrationHandler} from './registration-api.mjs';
 import {practiceAuth} from './practice-auth.mjs';import {excelZip} from './sample-excel.mjs';
 const catalog=await loadRegistrationCatalog(),pair=catalog.entries[0],other=catalog.entries.find(e=>e.major!==pair.major);
 const structure=analyzeCsv(new TextEncoder().encode('시설명,면수\n가상A,10'),'가상시설.csv');
-const fields={dataName:'가상시설',keywords:'시설, 면수',...pair,basis:'합성 근거 문서',};
+const fields={dataName:'가상시설',keywords:'시설, 면수,운영',...pair,basis:'합성 근거 문서',};
 const record={structure,fields,reviewed:true,basisConfirmed:true};
-const candidate={...fields,basis:'',keywords:['시설'],evidence:['dataName','keywords','major','minor'].map(field=>({field,columnIds:['col_001']}))};
+const candidate={...fields,basis:'',keywords:['시설','면수','운영'],evidence:['dataName','keywords','major','minor'].map(field=>({field,columnIds:['col_001']}))};
 const validate=value=>validateRegistrationCandidates(JSON.stringify(value),structure,{evidenceMode:'ids',catalog});
 const env={PRACTICE_ACCESS_CODE:'catalog-test-access',HASA_API_KEY:'catalog-test-key',LLM_PROVIDER:'hasa',LLM_MODEL:'exaone-4.0-32b',HASA_BASE_URL:'https://open.hasa.re.kr/v1',HUB_CONNECTION_VERIFIED:'true'};
 const origin='https://catalog.test';const login=await practiceAuth.handle(new Request(origin+'/api/auth',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({accessCode:env.PRACTICE_ACCESS_CODE})}),env);const cookie=login.headers.get('set-cookie').split(';')[0];
@@ -38,7 +38,7 @@ test('분류 상태 구분: 추천 없음 / 검증 거부 / 검증 통과 / 목�
 test('공영주차장: 프롬프트 분류 근거 예시 포함, 검증 후 수락·수정 값만 최종 Excel 반영',async()=>{
  const parking=analyzeCsv(new TextEncoder().encode('주차장명,주차구획수,위도,경도\n가상주차장,10,35.8,129.2'),'가상시 샘플 공영주차장 운영 현황.csv');
  const road=catalog.entries.find(e=>e.major==='교통및물류'&&e.minor==='도로'),rail=catalog.entries.find(e=>e.major==='교통및물류'&&e.minor==='철도');assert(road&&rail);
- const raw={...candidate,...road,dataName:parking.fileName.slice(0,-4),keywords:['주차장명']};let prompt;
+ const raw={...candidate,...road,dataName:parking.fileName.slice(0,-4),keywords:['주차장명','주차면수','운영시간']};let prompt;
  const result=await generateRegistrationMetadata({structure:parking,catalog,config:{name:'test',model:'test',provider:{generate:async a=>{prompt=a.instructions;assert.equal(JSON.parse(a.question).allowedClassifications.length,77);return JSON.stringify(raw);}}}});
  assert.match(prompt,/"field":"major","source":"filename"/);assert.match(prompt,/"field":"minor","source":"columns"/);assert.equal(result.classificationState,'suggested');assert.equal(result.fields.major,road.major);assert.equal(result.fields.minor,road.minor);assert.equal(result.fields.basis,'');
  assert.throws(()=>validateRegistrationCandidates(JSON.stringify({...raw,evidence:raw.evidence.filter(e=>!['major','minor'].includes(e.field))}),parking,{evidenceMode:'ids',catalog}),e=>e.code==='EVIDENCE_VALIDATION_FAILED');

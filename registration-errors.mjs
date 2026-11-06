@@ -14,6 +14,7 @@ export const REGISTRATION_AI_ERRORS=Object.freeze({
  JSON_SCHEMA_INVALID:[502,'AI 응답 항목의 형식이 올바르지 않습니다. AI 후보를 다시 생성해 주세요.'],
  UNKNOWN_CSV_COLUMN:[502,'AI가 실제 CSV에 없는 컬럼을 근거로 사용했습니다. AI 후보를 다시 생성해 주세요.'],
  BASIS_VALIDATION_FAILED:[502,'AI가 확인되지 않은 보유근거를 생성했습니다. 후보를 적용하지 않았습니다. 다시 생성하거나 실제 근거를 직접 확인해 입력하세요.'],
+ KEYWORDS_TOO_FEW:[502,'중복·공백·빈값 제거 후 키워드가 최소 3개 필요합니다. 이 파일의 AI 후보를 다시 생성해 주세요.'],
  EVIDENCE_VALIDATION_FAILED:[502,'AI 후보의 컬럼 근거가 누락되었거나 올바르지 않습니다. AI 후보를 다시 생성해 주세요.'],
  UNEXPECTED_ERROR:[500,'AI 처리 중 예상하지 못한 오류가 발생했습니다. 확인 번호를 관리자에게 알려주세요. 기존 입력은 유지됩니다.'],
 });

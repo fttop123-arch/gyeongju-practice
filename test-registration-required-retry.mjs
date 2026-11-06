@@ -9,7 +9,7 @@ const keys=['dataName','major','minor','basis','keywords','evidence'];
 const structure=analyzeCsv(new TextEncoder().encode('종류,수량\nPRIVATE_SYNTHETIC_ROW,2'),'합성생활폐기물.csv');
 const config=getLlmConfiguration({LLM_PROVIDER:'hasa',LLM_MODEL:'synthetic-model',HASA_API_KEY:'synthetic-only'});
 const pair={major:'환경보호',minor:'폐기물'},catalog={verified:true,entries:[pair]};
-const valid={dataName:'합성생활폐기물',...pair,basis:'',keywords:['폐기물'],evidence:['dataName','major','minor','keywords'].map(field=>({field,source:'filename'})),basisRecommendation:{lawName:'폐기물관리법',reason:'합성 업무 관련 후보'}};
+const valid={dataName:'합성생활폐기물',...pair,basis:'',keywords:['폐기물','종류','수량'],evidence:['dataName','major','minor','keywords'].map(field=>({field,source:'filename'})),basisRecommendation:{lawName:'폐기물관리법',reason:'합성 업무 관련 후보'}};
 const reply=value=>Response.json({choices:[{message:{content:JSON.stringify(value)},finish_reason:'stop'}]});
 const omit=(...fields)=>Object.fromEntries(Object.entries(valid).filter(([k])=>!fields.includes(k)));
 for(const field of keys){

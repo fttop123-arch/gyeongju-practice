@@ -3,7 +3,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {validateRegistrationCandidates,generateRegistrationMetadata} from './registration-metadata.mjs';
 import {getLlmConfiguration} from './llm-providers.mjs';
 const structure={fileName:'합성주차장.csv',fileSize:300,encoding:'utf-8',delimiter:',',rowCount:5,columnCount:3,columns:[{name:'주차장명',type:'문자열',missingCount:0,missingRate:0},{name:'Parking Count',type:'정수',missingCount:1,missingRate:20},{name:'운영 시간',type:'문자열',missingCount:0,missingRate:0}]};
-const base={dataName:'합성주차장',keywords:['주차장'],major:'',minor:'',basis:'',};
+const base={dataName:'합성주차장',keywords:['주차장','주차면수','운영시간'],major:'',minor:'',basis:'',};
 const names={...base,evidence:[{field:'dataName',columns:['주차장명']},{field:'keywords',columns:['주차장명']}]};
 const ids={...base,evidence:[{field:'dataName',columnIds:['col_001']},{field:'keywords',columnIds:['col_001']}]};
 const config=getLlmConfiguration({LLM_PROVIDER:'hasa',LLM_MODEL:'exaone-4.0-32b',HASA_BASE_URL:'https://open.hasa.re.kr/v1',HASA_API_KEY:'synthetic-column-key'});

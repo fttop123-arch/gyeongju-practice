@@ -7,7 +7,7 @@ import {createRegistrationExcel} from './registration-excel.mjs';
 const catalog=await loadRegistrationCatalog();
 const structure=analyzeCsv(new TextEncoder().encode('명칭,수량\n합성자료,10'),'가상 공영주차장.csv');
 const pair=catalog.entries.find(e=>e.major==='교통및물류'&&e.minor==='도로');
-const base={dataName:'가상 공영주차장',keywords:['명칭'],...pair,basis:'',evidence:[{field:'dataName',source:'filename'},{field:'keywords',columnIds:['col_001']},{field:'major',source:'filename'},{field:'minor',source:'filename'}]};
+const base={dataName:'가상 공영주차장',keywords:['명칭','주차면수','운영시간'],...pair,basis:'',evidence:[{field:'dataName',source:'filename'},{field:'keywords',columnIds:['col_001']},{field:'major',source:'filename'},{field:'minor',source:'filename'}]};
 const validate=value=>validateRegistrationCandidates(JSON.stringify(value),structure,{evidenceMode:'ids',catalog});
 function run(responses){let calls=0;const prompts=[];const promise=generateRegistrationMetadata({structure,catalog,config:{name:'test',model:'test',provider:{generate:async a=>{prompts.push(a);return JSON.stringify(responses[Math.min(calls++,responses.length-1)]);}}}});return {promise,get calls(){return calls;},prompts};}
 test('분류: 파일명 근거는 허위 컬럼 강제 연결 없음',()=>{const r=validate(base);assert.equal(r.classificationState,'suggested');assert.deepEqual(r.evidence.find(e=>e.field==='major'),{field:'major',source:'filename',columns:[]});assert.deepEqual(r.evidence.find(e=>e.field==='minor'),{field:'minor',source:'filename',columns:[]});});

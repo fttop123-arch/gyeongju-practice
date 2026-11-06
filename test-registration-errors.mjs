@@ -8,7 +8,7 @@ import {validateRegistrationCandidates} from './registration-metadata.mjs';
 const env={PRACTICE_ACCESS_CODE:'test-error-access-only',HASA_API_KEY:'test-error-api-only',LLM_PROVIDER:'hasa',LLM_MODEL:'exaone-4.0-32b',HASA_BASE_URL:'https://open.hasa.re.kr/v1',HUB_CONNECTION_VERIFIED:'true'};
 const origin='https://synthetic-errors.test';
 const structure={fileName:'synthetic-error.csv',fileSize:40,encoding:'utf-8',delimiter:',',rowCount:1,columnCount:1,columns:[{name:'가상컬럼',type:'문자열',missingCount:0,missingRate:0}]};
-const candidate={dataName:'synthetic-error',keywords:['가상'],major:'',minor:'',basis:'',evidence:[{field:'dataName',columnIds:['col_001']},{field:'keywords',columnIds:['col_001']}]};
+const candidate={dataName:'synthetic-error',keywords:['가상','시설','운영'],major:'',minor:'',basis:'',evidence:[{field:'dataName',columnIds:['col_001']},{field:'keywords',columnIds:['col_001']}]};
 const reply=(value,reason='stop')=>Response.json({choices:[{message:{content:typeof value==='string'?value:JSON.stringify(value)},finish_reason:reason}]});
 const login=await practiceAuth.handle(new Request(origin+'/api/auth',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({accessCode:env.PRACTICE_ACCESS_CODE})}),env);
 const cookie=login.headers.get('set-cookie').split(';')[0];
@@ -32,6 +32,7 @@ const cases=[
  ['JSON 필수항목 누락','JSON_REQUIRED_MISSING',async()=>reply({...candidate,keywords:undefined}),'candidate_validation',200,'stop'],
  ['JSON 자료형 오류','JSON_SCHEMA_INVALID',async()=>reply({...candidate,keywords:'가상'}),'candidate_validation',200,'stop'],
  ['실제 CSV에 없는 컬럼','UNKNOWN_CSV_COLUMN',async()=>reply({...candidate,evidence:[{field:'dataName',columnIds:['col_999']}]}),'candidate_validation',200,'stop'],
+ ['키워드 부족','KEYWORDS_TOO_FEW',async()=>reply({...candidate,keywords:['가상']}),'candidate_validation',200,'stop'],
  ['보유근거 검증 실패','BASIS_VALIDATION_FAILED',async()=>reply({...candidate,basis:'unverified-basis-marker'}),'candidate_validation',200,'stop'],
  ['후보 근거 누락','EVIDENCE_VALIDATION_FAILED',async()=>reply({...candidate,evidence:[]}),'candidate_validation',200,'stop'],
  ['예상하지 못한 오류','UNEXPECTED_ERROR',async()=>{const e=new Error('private-unexpected-marker');e.code='forged-code';e.stage='private-stage';throw e;},'provider_request',null,null],
@@ -42,7 +43,7 @@ for(const [name,code,fetchApi,stage,providerStatus,finishReason] of cases)test(n
  try{
   const response=await createRegistrationHandler(fetchApi)(request(),env),body=await response.json();
   assert.equal(response.status,REGISTRATION_AI_ERRORS[code][0]);assert.equal(body.code,code);assert(body.error.startsWith(REGISTRATION_AI_ERRORS[code][1]));assert.match(body.requestId,/^[a-f0-9-]{36}$/);
-  const retried=['JSON_REQUIRED_MISSING','EVIDENCE_VALIDATION_FAILED','UNKNOWN_CSV_COLUMN'].includes(code);assert.equal(logs.length,retried?2:1);const log=JSON.parse(logs.at(-1));assert.deepEqual(log,{stage,code,providerStatus,finishReason,requestId:body.requestId,attempt:retried?2:1,...(code==='JSON_REQUIRED_MISSING'?{missingFields:['keywords']}:{})});
+  const retried=['JSON_REQUIRED_MISSING','EVIDENCE_VALIDATION_FAILED','UNKNOWN_CSV_COLUMN','KEYWORDS_TOO_FEW'].includes(code);assert.equal(logs.length,retried?2:1);const log=JSON.parse(logs.at(-1));assert.deepEqual(log,{stage,code,providerStatus,finishReason,requestId:body.requestId,attempt:retried?2:1,...(code==='JSON_REQUIRED_MISSING'?{missingFields:['keywords']}:{})});
   for(const s of logs){const entry=JSON.parse(s);assert.equal(entry.requestId,body.requestId);assert(Object.keys(entry).every(k=>['stage','code','providerStatus','finishReason','requestId','attempt','missingFields'].includes(k)));}
   for(const marker of [env.PRACTICE_ACCESS_CODE,env.HASA_API_KEY,cookie,structure.fileName,'가상컬럼','upstream-private-marker','private-network-marker','private-timeout-marker','unverified-basis-marker','private-unexpected-marker','private-finish-marker'])assert(!JSON.stringify({logs,body}).includes(marker),'private details leaked');
   if(['UNKNOWN_CSV_COLUMN','BASIS_VALIDATION_FAILED','JSON_PARSE_FAILED','JSON_REQUIRED_MISSING'].includes(code))assert(!body.error.includes('API 키')&&!body.error.includes('서버 설정'));
